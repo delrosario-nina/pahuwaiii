@@ -1,9 +1,7 @@
-// server.js (complete, ready-to-run)
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
-
 
 const app = express();
 app.use(cors());
@@ -19,7 +17,6 @@ const db = new sqlite3.Database("todo.db", (err) => {
   }
 });
 
-// Ensure the deleted_at column exists (safe on restart)
 db.serialize(() => {
   db.all("PRAGMA table_info(tasks);", [], (err, columns) => {
     if (err) {
@@ -46,7 +43,7 @@ db.serialize(() => {
 
 // ========== API ==========
 
-// Get all active tasks (not soft-deleted)
+// get all active tasks (deleted_at IS NULL)
 app.get("/tasks", (req, res) => {
   db.all("SELECT * FROM tasks WHERE deleted_at IS NULL", [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -54,7 +51,7 @@ app.get("/tasks", (req, res) => {
   });
 });
 
-// Get single task
+// get single task
 app.get("/tasks/:id", (req, res) => {
   db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -63,7 +60,7 @@ app.get("/tasks/:id", (req, res) => {
   });
 });
 
-// Create task
+// create task
 app.post("/tasks", (req, res) => {
   const { name, due_date, due_time, priority, status } = req.body;
   const stmt = db.prepare(
@@ -76,7 +73,7 @@ app.post("/tasks", (req, res) => {
   stmt.finalize();
 });
 
-// Patch task
+// patch task
 app.patch("/tasks/:id", (req, res) => {
   const { id } = req.params;
   const updates = req.body;
@@ -92,7 +89,7 @@ app.patch("/tasks/:id", (req, res) => {
   });
 });
 
-// Soft delete a task and return the deleted row
+// soft delete a task and return the deleted row
 app.delete("/tasks/:id", (req, res) => {
   const { id } = req.params;
   db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
@@ -107,7 +104,7 @@ app.delete("/tasks/:id", (req, res) => {
   });
 });
 
-// Undo delete
+// undo delete
 app.post("/tasks/:id/undo", (req, res) => {
   const { id } = req.params;
   db.run("UPDATE tasks SET deleted_at = NULL WHERE id = ?", [id], function (err) {

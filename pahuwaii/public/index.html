@@ -18,8 +18,6 @@
 
 <body class="min-h-screen flex flex-col items-center p-8"> 
 
-  <!-- NAV BAR -->
-
   <div class="flex justify-between items-center w-[96%] max-w-7xl mb-6">
     <!-- toggle for nightmode -->
     <h1 id="titleToggle" class="text-5xl kanban-title font-bold tracking-wide text-center cursor-pointer">
@@ -50,32 +48,33 @@
     <!-- KANBAN COLUMNS -->
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 p-6 min-h-0">
-      <!-- To Do Column -->
+      <!-- to do column -->
       <div class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
         <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
         <div id="notStartedTasks" class="kanban-scroll pr-2"></div>
       </div>
 
-      <!-- In Progress Column -->
+      <!-- in progress column -->
       <div class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
         <h2 class="font-bold text-xl kanban-title mb-4 text-black">In Progress</h2>
         <div id="inProgressTasks" class="kanban-scroll pr-2"></div>
       </div>
 
-      <!-- Done Column -->
+      <!-- done column -->
       <div class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
         <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
         <div id="doneTasks" class="kanban-scroll pr-2"></div>
       </div>
     </div>
 
-    <!-- Progress Bar -->
+    <!-- progress bar -->
     <div class="w-full h-6 border-t-2 border-black">
       <div id="progressBar" class="h-6 bg-black transition-all duration-500" style="width: 0%"></div>
     </div>
   </div>
   <!-- END OF MAIN CONTAINER -->
 
+  
   <!-- ADD TASK -->
   <div id="taskModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
     <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
