@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pahuwaii Kanban</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Handwritten Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    body { 
+      background: url('DO.png'); 
+      background-size: cover;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+    * { 
+      font-family: 'Schoolbell', cursive;
+    }
+    /* Make Kanban columns scrollable but hide scrollbar */
+    .kanban-scroll {
+      overflow-y: auto !important;
+      flex: 1 1 0%;
+      min-height: 0;
+      max-height: 60vh;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;  /* IE 10+ */
+    }
+    .kanban-scroll::-webkit-scrollbar {
+      display: none; /* Chrome/Safari/Webkit */
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-8">
+  <!-- Top bar -->
+  <div class="flex justify-between items-center w-[96%] max-w-7xl mb-6">
+    <h1 class="text-5xl kanban-title font-bold tracking-wide text-center">PAHUWAII : 3</h1>
+    <button id="showViewBtn" class="" title="View Profile">
+        <span class="material-symbols-outlined" style="font-size:48px;">account_circle</span>
+    </button>  
+  </div>
+
+  <!-- Big Rectangle -->
+  <div class="bg-white shadow-2xl w-[96%] max-w-7xl flex flex-col border-2 border-black flex-grow rounded" style="min-height: 0;">
+    
+    <!-- Header row with Add + Sort -->
+    <div class="flex justify-between items-center px-6 py-3 border-b-2 border-black">
+      <button id="showFormBtn" class="flex items-center justify-center text-black font-bold transition rounded-full w-10 h-10 text-3xl" title="Add Task">
+        <span class="material-symbols-outlined" style="font-size:32px;">add_circle</span>
+      </button>
+      <select id="sortBy" class="border-2 border-black px-3 py-2 text-sm rounded">
+        <option value="date_added">Date Added</option>
+        <option value="due_date">Due Date</option>
+        <option value="priority">Priority</option>
+      </select>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 p-6 min-h-0" style="min-height:0;">
+      <!-- To Do -->
+      <div class="bg-pink-50 border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
+        <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
+        <div id="notStartedTasks" class="kanban-scroll pr-2"></div>
+      </div>
+      <!-- In Progress -->
+      <div class="bg-yellow-50 border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
+        <h2 class="font-bold text-xl kanban-title mb-4 text-black">In Progress</h2>
+        <div id="inProgressTasks" class="kanban-scroll pr-2"></div>
+      </div>
+      <!-- Done -->
+      <div class="bg-green-50 border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]">
+        <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
+        <div id="doneTasks" class="kanban-scroll pr-2"></div>
+      </div>
+    </div>
+
+    <!-- Sharp Progress Bar (connected) -->
+    <div class="w-full h-6 bg-white-200 border-t-2 border-black">
+      <div id="progressBar" class="h-6 bg-black transition-all duration-500" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <!-- Add Task Modal -->
+  <div id="taskModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+      <h2 class="text-2xl kanban-title font-bold mb-4">Add Task</h2>
+      <form id="taskForm" class="grid grid-cols-1 gap-3">
+        <input type="text" id="name" placeholder="Task name" required class="border p-2 rounded">
+        <input type="date" id="due_date" class="border p-2 rounded">
+        <input type="time" id="due_time" class="border p-2 rounded">
+        <select id="priority" class="border p-2 rounded">
+          <option value="do now">Important & Urgent [Do Now]</option>
+          <option value="do next">Important & not Urgent [Do Next] </option>
+          <option value="do later">not Important & Urgent [Do Later] </option>
+          <option value="do last">not Important & not Urgent [Do Last] </option>
+        </select>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" id="cancelBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-purple-300 text-black hover:bg-purple-400 rounded">Add</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Task Modal -->
+  <div id="editTaskModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
+    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+      <h2 class="text-2xl kanban-title font-bold mb-4">Edit Task</h2>
+      <form id="editTaskForm" class="grid grid-cols-1 gap-3">
+        <input type="text" id="edit_name" placeholder="Task name" required class="border p-2 rounded">
+        <input type="date" id="edit_due_date" class="border p-2 rounded">
+        <input type="time" id="edit_due_time" class="border p-2 rounded">
+        <select id="edit_priority" class="border p-2 rounded">
+          <option value="do now">do now</option>
+          <option value="do next">do next</option>
+          <option value="do later">do later</option>
+          <option value="do last">do last</option>
+        </select>
+        <select id="edit_status" class="border p-2 rounded">
+          <option value="to do">to do</option>
+          <option value="in progress">in progress</option>
+          <option value="done">done</option>
+        </select>
+        <div class="flex justify-end gap-2 mt-4">
+          <button type="button" id="cancelEditTaskBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-purple-300 text-black hover:bg-purple-400 rounded">Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="undoBanner" class="fixed bottom-6 bg-black text-white px-4 py-2 rounded shadow-lg flex items-center gap-4">
+    <span>Task deleted</span>
+    <button id="undoBtn" class="bg-white text-black px-2 py-1 rounded">Undo</button>
+  </div>
+
+  <script>
+    const API_URL = "/tasks";
+    let lastDeletedTask = null;
+    let undoTimeout = null;
+
+    const statusOptions = [
+      { value: "to do", label: "to do" },
+      { value: "in progress", label: "in progress" },
+      { value: "done", label: "done" }
+    ];
+    const priorityColors = {
+      "do now": "bg-green-200 text-green-800",
+      "do next": "bg-blue-200 text-blue-800",
+      "do later": "bg-yellow-200 text-yellow-800",
+      "do last": "bg-red-200 text-red-800"
+    };
+
+    let allTasks = [];
+
+    // Modal handling
+    const taskModal = document.getElementById("taskModal");
+    const showFormBtn = document.getElementById("showFormBtn");
+    const cancelBtn = document.getElementById("cancelBtn");
+    const sortBy = document.getElementById("sortBy");
+
+    // Load sort filter from localStorage or default
+    function loadSortFilter() {
+      const savedSort = localStorage.getItem("sortBy") || "date_added";
+      sortBy.value = savedSort;
+    }
+    loadSortFilter();
+
+    // Save sort filter to localStorage on change
+    sortBy.addEventListener("change", function() {
+      localStorage.setItem("sortBy", sortBy.value);
+      renderBoard();
+    });
+
+    showFormBtn.addEventListener("click", () => taskModal.classList.remove("hidden"));
+    cancelBtn.addEventListener("click", () => taskModal.classList.add("hidden"));
+
+    document.getElementById("taskForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const due_date = document.getElementById("due_date").value;
+      const due_time = document.getElementById("due_time").value;
+      const priority = document.getElementById("priority").value;
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, due_date, due_time, priority, status: "to do" })
+        });
+        if (!res.ok) throw new Error("Failed to add task");
+        await res.json();
+        e.target.reset();
+        taskModal.classList.add("hidden");
+        loadTasks();
+      } catch (err) {
+        alert("Error adding task, check console for details.");
+      }
+    });
+
+    // Edit Task Modal logic
+    let editingTaskId = null;
+    const editTaskModal = document.getElementById("editTaskModal");
+    const editTaskForm = document.getElementById("editTaskForm");
+    const cancelEditTaskBtn = document.getElementById("cancelEditTaskBtn");
+
+    window.openEditTaskModal = function(task) {
+      editingTaskId = task.id;
+      document.getElementById("edit_name").value = task.name || "";
+      document.getElementById("edit_due_date").value = task.due_date || "";
+      document.getElementById("edit_due_time").value = task.due_time || "";
+      document.getElementById("edit_priority").value = task.priority || "Do";
+      document.getElementById("edit_status").value = task.status || "to do";
+      editTaskModal.classList.remove("hidden");
+      setTimeout(() => document.getElementById("edit_name").focus(), 100);
+    };
+
+    cancelEditTaskBtn.addEventListener("click", () => {
+      editTaskModal.classList.add("hidden");
+      editingTaskId = null;
+    });
+
+    editTaskForm.addEventListener("submit", async function(e) {
+      e.preventDefault();
+      if (!editingTaskId) return;
+      const name = document.getElementById("edit_name").value;
+      const due_date = document.getElementById("edit_due_date").value;
+      const due_time = document.getElementById("edit_due_time").value;
+      const priority = document.getElementById("edit_priority").value;
+      const status = document.getElementById("edit_status").value;
+      await fetch(`${API_URL}/${editingTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, due_date, due_time, priority, status })
+      });
+      editTaskModal.classList.add("hidden");
+      editingTaskId = null;
+      loadTasks();
+    });
+
+    // Render tasks
+    async function loadTasks() {
+      const res = await fetch(API_URL);
+      allTasks = await res.json();
+      renderBoard();
+    }
+
+    function renderBoard() {
+      const sortValue = sortBy.value;
+      let tasks = [...allTasks];
+
+      // Sorting logic
+      if (sortValue === "date_added") {
+        tasks.sort((a, b) => new Date(a.date_added) - new Date(b.date_added));
+      } else if (sortValue === "due_date") {
+        tasks.sort((a, b) => new Date(a.due_date || 0) - new Date(b.due_date || 0));
+      } else if (sortValue === "priority") {
+        const order = { "do now": 1, "do next": 2, "do later": 3, "do last": 4 };
+        tasks.sort((a, b) => (order[a.priority] || 99) - (order[b.priority] || 99));
+      }
+
+      renderColumn("notStartedTasks", tasks.filter(t => t.status === "to do"));
+      renderColumn("inProgressTasks", tasks.filter(t => t.status === "in progress"));
+      renderColumn("doneTasks", tasks.filter(t => t.status === "done"));
+      updateProgress(tasks);
+    }
+
+    function renderColumn(containerId, tasks) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = "";
+    tasks.forEach(task => {
+      const card = document.createElement("div");
+      card.className = "bg-white border shadow p-4 mb-1 flex flex-col gap-2 hover:shadow-md transition rounded-md";
+      // Checkbox uses inline onchange that calls updateStatus directly
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="cb_${task.id}" ${task.status === "done" ? "checked" : ""} onchange="handleCheckboxChange(${task.id}, this.checked)" />
+            <span class="font-semibold text-lg kanban-title">${escapeHtml(task.name)}</span>
+          </div>
+          <div>
+            <button onclick="openEditTaskModal(${task.id})" class="material-symbols-outlined text-base align-middle ml-1" title="Edit Task">edit</button>
+            <button onclick="confirmDelete(${task.id})" class="text-red-500 hover:text-red-700 ml-2" title="Delete">&#128465;</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs mt-1">
+          <input type="date" value="${task.due_date || ''}" class="border p-0.5 text-[10px] rounded w-[7em]"
+            onchange="updateTaskField(${task.id}, 'due_date', this.value)" />
+          <input type="time" value="${task.due_time || ''}" class="border p-0.5 text-[10px] rounded w-[7em]"
+            onchange="updateTaskField(${task.id}, 'due_time', this.value)" />
+          <select class="border p-0.5 text-[10px] rounded ${priorityColors[task.priority] || 'bg-gray-200 text-gray-800'}"
+            onchange="updateTaskField(${task.id}, 'priority', this.value)">
+            <option value="do now" ${task.priority === "do now" ? "selected" : ""}>Do Now</option>
+            <option value="do next" ${task.priority === "do next" ? "selected" : ""}>Do Next</option>
+            <option value="do later" ${task.priority === "do later" ? "selected" : ""}>Do Later</option>
+            <option value="do last" ${task.priority === "do last" ? "selected" : ""}>Do Last</option>
+          </select>
+          <select id="status_sel_${task.id}" class="border p-0.1 text-xs rounded bg-gray-200 text-gray-800"
+            onchange="updateTaskField(${task.id}, 'status', this.value)">
+            <option value="to do" ${task.status === "to do" ? "selected" : ""}>to do</option>
+            <option value="in progress" ${task.status === "in progress" ? "selected" : ""}>in progress</option>
+            <option value="done" ${task.status === "done" ? "selected" : ""}>done</option>
+          </select>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Called directly by checkbox onchange
+  async function handleCheckboxChange(id, checked) {
+    const newStatus = checked ? "done" : "to do";
+    const cb = document.getElementById(`cb_${id}`);
+    cb.disabled = true; // prevent double clicks
+    try {
+      await updateStatus(id, newStatus);
+    } catch (err) {
+      // revert checkbox if request failed
+      cb.checked = !checked;
+      alert("Failed to update status: " + err.message);
+    } finally {
+      cb.disabled = false;
+    }
+  }
+
+  // Simple updateStatus that PATCHes the status and reloads tasks
+  async function updateStatus(id, status) {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status })
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText || "Server error");
+    }
+    await loadTasks(); // refresh UI after successful status change
+  }
+
+
+
+    // Add this function for editing the task name
+    window.editTaskName = function(id, currentName) {
+      const nameSpan = document.getElementById(`task_name_${id}`);
+      if (!nameSpan) return;
+      nameSpan.outerHTML = `
+        <form id="edit_task_name_form_${id}" class="inline">
+          <input id="edit_task_name_input_${id}" type="text" value="${currentName.replace(/"/g, '&quot;')}" class="border p-1 text-sm rounded" style="width: 12em;" />
+          <button type="submit" class="ml-1 px-2 py-1 bg-purple-300 text-black hover:bg-purple-400 rounded">Update</button>
+        </form>
+      `;
+      const form = document.getElementById(`edit_task_name_form_${id}`);
+      const input = document.getElementById(`edit_task_name_input_${id}`);
+      input.focus();
+      form.addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const newName = input.value.trim();
+        if (newName && newName !== currentName) {
+          await fetch(`${API_URL}/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newName })
+          });
+        }
+        loadTasks();
+      });
+      input.addEventListener("blur", () => loadTasks());
+    };
+
+    // Progress bar update
+    function updateProgress(tasks) {
+      const done = tasks.filter(t => t.status === "done").length;
+      const total = tasks.length;
+      const percent = total > 0 ? Math.round((done / total) * 100) : 0;
+      document.getElementById("progressBar").style.width = percent + "%";
+    }
+
+    // Inline editing + helpers
+    window.editField = function(id, field, value) {
+      const span = document.getElementById(`${field}_${id}`);
+      if (!span) return;
+      let inputType = field === "due_date" ? "date" : "time";
+      span.outerHTML = `<input id="input_${field}_${id}" type="${inputType}" value="${value}" class="border p-1 text-sm" style="width: 7em;" onblur="saveField(${id}, '${field}')" onkeydown="if(event.key==='Enter'){this.blur();}" />`;
+      document.getElementById(`input_${field}_${id}`).focus();
+    };
+
+    window.saveField = async function(id, field) {
+      const input = document.getElementById(`input_${field}_${id}`);
+      if (!input) return;
+      const value = input.value;
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value })
+      });
+      loadTasks();
+    };
+
+    window.editPriority = function(id, value) {
+      const span = document.getElementById(`priority_${id}`);
+      if (!span) return;
+      span.outerHTML = `
+        <select id="input_priority_${id}" class="border p-1 text-sm" onblur="savePriority(${id})" onchange="savePriority(${id})">
+          <option value="do now" ${value === "do now" ? "selected" : ""}>Do Now</option>
+          <option value="do next" ${value === "do next" ? "selected" : ""}>Do Next</option>
+          <option value="do later" ${value === "do later" ? "selected" : ""}>Do Later</option>
+          <option value="do last" ${value === "do last" ? "selected" : ""}>Do Last</option>
+        </select>
+      `;
+      document.getElementById(`input_priority_${id}`).focus();
+    };
+
+    window.savePriority = async function(id) {
+      const input = document.getElementById(`input_priority_${id}`);
+      if (!input) return;
+      const value = input.value;
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: value })
+      });
+      loadTasks();
+    };
+
+    window.editStatus = function(id, value) {
+      const span = document.getElementById(`status_${id}`);
+      if (!span) return;
+      span.outerHTML = `
+        <select id="input_status_${id}" class="border p-1 text-sm" onblur="saveStatus(${id})" onchange="saveStatus(${id})">
+          ${statusOptions.map(opt => `<option value="${opt.value}" ${value === opt.value ? "selected" : ""}>${opt.label}</option>`).join("")}
+        </select>
+      `;
+      document.getElementById(`input_status_${id}`).focus();
+    };
+
+    window.saveStatus = async function(id) {
+      const input = document.getElementById(`input_status_${id}`);
+      if (!input) return;
+      const value = input.value;
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: value })
+      });
+      loadTasks();
+    };
+
+    window.updateStatus = async function(id, status) {
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      loadTasks();
+    };
+
+    window.updateTaskField = async function(id, field, value) {
+      await fetch(`${API_URL}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value })
+      });
+      loadTasks();
+    };
+
+    window.deleteTask = async function(id) {
+      const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        loadTasks();
+      } else {
+        // Optionally show an error
+        loadTasks(); // Always reload to sync with backend
+      }
+    };
+
+    
+    async function deleteTask(id) {
+      if (!confirm("Are you sure you want to delete this task?")) return;
+      const res = await fetch(`${API_URL}/${id}`);
+      const task = await res.json();
+      lastDeletedTask = task;
+
+      await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+      loadTasks();
+
+      showUndo();
+    }
+
+    function showUndo() {
+      const banner = document.getElementById("undoBanner");
+      banner.style.display = "flex";
+      clearTimeout(undoTimeout);
+      undoTimeout = setTimeout(() => {
+        banner.style.display = "none";
+        lastDeletedTask = null;
+      }, 5000);
+    }
+
+    document.getElementById("undoBtn").addEventListener("click", async () => {
+      if (!lastDeletedTask) return;
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(lastDeletedTask)
+      });
+      lastDeletedTask = null;
+      document.getElementById("undoBanner").style.display = "none";
+      loadTasks();
+    });
+    
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    // Handle sorting change
+    sortBy.addEventListener("change", renderBoard);
+
+    // Initial load
+    loadTasks();
+  </script>
+</body>
+</html>

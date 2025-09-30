@@ -1,15 +1,17 @@
+//imports
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(cors());              //cors is needed for local testing with live server extension 
+app.use(express.json());      // for parsing application/json
 
 // serve static frontend from "public" folder
 app.use(express.static(path.join(__dirname, "public")));
 
+//create a database
 const db = new sqlite3.Database("todo.db", (err) => {
   if (err) {
     console.error("Failed to open DB:", err.message);
@@ -17,6 +19,7 @@ const db = new sqlite3.Database("todo.db", (err) => {
   }
 });
 
+// create tasks table if it doesn't exist, with deleted_at for soft deletes (coz i fucked up at the start hehe)
 db.serialize(() => {
   db.all("PRAGMA table_info(tasks);", [], (err, columns) => {
     if (err) {
@@ -56,7 +59,7 @@ app.get("/tasks/:id", (req, res) => {
   db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: "Task not found" });
-    res.json(row);
+    res.json(row); 
   });
 });
 
@@ -70,10 +73,10 @@ app.post("/tasks", (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ id: this.lastID, name, due_date, due_time, priority, status });
   });
-  stmt.finalize();
+  stmt.finalize(); 
 });
 
-// patch task
+// update task 
 app.patch("/tasks/:id", (req, res) => {
   const { id } = req.params;
   const updates = req.body;
@@ -113,13 +116,13 @@ app.post("/tasks/:id/undo", (req, res) => {
   });
 });
 
+//for debugging (ma-show sa console)
 app.post("/debug", (req, res) => {
   console.log("DEBUG POST body:", req.body);
   res.json({ received: req.body });
 });
 
-// Fallback: let express.static serve index.html at /
-// (No extra route needed. If you want a forced fallback for SPA routing:)
+// fallback to serve index.html for any other route to ensure it stays a single page
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

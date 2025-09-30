@@ -4,8 +4,8 @@ For a student overwhelmed by numerous backlogs everyday, creating a to-do list m
 
 Tech Stack:
     a) Frontend - HTML, CSS (+tailwind), JavaScript
-    b) Backend - Node.js + Express
-    c) Database - Sqlite
+    b) Backend - Node.js + Express                          : javascript all throughout 
+    c) Database - Sqlite                                    : easier learing curve and one file only
 
 How to run the web app: Run the node.js file (using the command node server.js) and then click the link provided (http://locahlhost:3000)
 
@@ -67,8 +67,65 @@ Breakdown of each file
         Uses express.json() to parse JSON request bodies.
         Uses cors() so frontend can communicate without cross-origin issues.
 
+What is inside the database?
+1) id - unique id for each task (incremental)
+2) name 
+3) due_date 
+4) due_time
+5) priority (do now, do next, do later, do last)
+6) status (to do, in progress, done)
+7) date_added (for sorting)
+8) deleted_at - for soft deletes (since we have an undo feature)
+
+How it works:
+1) User opens the app
+    browser loads index.html.
+    that file links pahuwaii.css (styling) and pahuwaii.js (logic).
+    initial task load
+    when pahuwaii.js runs, it calls loadTasks().
+    then it sends a GET /tasks request to server.js.
+    server.js queries the SQLite database and returns a JSON array of tasks.
+    pahuwaii.js then calls renderBoard() to display tasks in the correct columns.
+
+2) Adding a task
+    user opens the “Add Task” modal (frontend only).
+    on submit, JS sends a POST /tasks request to the backend with { name, due_date, due_time, priority, status }.
+    server.js inserts the new row into SQLite.
+    JS reloads tasks by calling loadTasks().
+
+3) Editing a task
+    user clicks edit.
+    modal opens with task details pre-filled from allTasks.
+    on submit, JS sends a PATCH /tasks/:id with the updated fields. 
+    server.js updates SQLite.
+    JS reloads tasks.
+
+4) Updating inline fields (ex: user changes priority from dropdown)
+    triggers updateTaskField().
+    sends PATCH /tasks/:id with { priority: "do later" }.
+    server updates SQLite and frontend reloads tasks.
+    
+5) Deleting + Undo
+    user clicks delete, JS shows confirmation modal.
+    on confirm, JS calls DELETE /tasks/:id.
+    server.js soft deletes the task by setting deleted_at to not null
+    JS shows Undo banner.
+    if Undo is clicked, JS calls POST /tasks/:id/undo, server sets deleted_at to null, frontend reloads tasks.
+
+6) Dark mode toggle
+    clicking the title toggles the .dark-mode class on <body>.
+    pahuwaii.css applies dark theme styles automatically.
 
 
-
-features to improve on:
+Features to improve on:
 - tasks with long names (ga-overflow sya rn)
+- night mode
+- colors for the priority dropdown (tailwind dropdown colors)
+- when you uncheck the checkbox, it always goes back to 'to do', not considering its previous status
+- drag to change status
+
+
+
+
+- separate file ang users
+- for the password recovery, pwede namna na mag-set ng questions or something                                               

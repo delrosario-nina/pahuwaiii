@@ -1,7 +1,6 @@
 
 const API_URL = "/tasks"; // Backend API endpoint
 
-//
 const statusOptions = [
   { value: "to do", label: "to do" },
   { value: "in progress", label: "in progress" },
@@ -15,14 +14,13 @@ const priorityColors = {
   "do last": "bg-[#99c2a5] text-black"
 };
 
-
 let allTasks = [];         // holds all tasks from server
 let editingTaskId = null;  // tracks task being edited
 let deleteIdPending = null; // tracks task pending deletion
 let lastDeletedTask = null; // stores deleted task for undo
 let undoTimeout = null;     // timeout reference for undo banner
 
-//DOM References
+//getting DOM elements from index.html
 const taskModal = document.getElementById("taskModal");
 const showFormBtn = document.getElementById("showFormBtn");
 const cancelBtn = document.getElementById("cancelBtn");
@@ -41,28 +39,28 @@ const undoBtn = document.getElementById("undoBtn");
 
 const titleToggle = document.getElementById("titleToggle");
 
-//sort helper function
+//sort helper function (to make sure the selected sort option persists after refresh)
 function loadSortFilter() {
   const savedSort = localStorage.getItem("sortBy") || "date_added";
   sortBy.value = savedSort;
 }
 
-//task display
+//task display 
 function renderBoard() {
   const sortValue = sortBy.value;
   let tasks = [...allTasks];
 
-  // Sort tasks by selected filter
+  // sort tasks first by selected filter
   if (sortValue === "date_added") {
-    tasks.sort((a, b) => new Date(a.date_added) - new Date(b.date_added));
+    tasks.sort((a, b) => new Date(a.date_added) - new Date(b.date_added)); //oldest first
   } else if (sortValue === "due_date") {
-    tasks.sort((a, b) => new Date(a.due_date || 0) - new Date(b.due_date || 0));
+    tasks.sort((a, b) => new Date(a.due_date || 0) - new Date(b.due_date || 0)); //earliest first
   } else if (sortValue === "priority") {
-    const order = { "do now": 1, "do next": 2, "do later": 3, "do last": 4 };
-    tasks.sort((a, b) => (order[a.priority] || 99) - (order[b.priority] || 99));
+    const order = { "do now": 1, "do next": 2, "do later": 3, "do last": 4 };   //assign values to make it nominal
+    tasks.sort((a, b) => (order[a.priority] || 99) - (order[b.priority] || 99)); //highest priority first
   }
 
-  // Render into columns
+  // then, render into columns
   renderColumn("notStartedTasks", tasks.filter(t => t.status === "to do"));
   renderColumn("inProgressTasks", tasks.filter(t => t.status === "in progress"));
   renderColumn("doneTasks", tasks.filter(t => t.status === "done"));
@@ -120,11 +118,11 @@ function renderColumn(containerId, tasks) {
     `;
     container.appendChild(card);
 
-      // checkbox handler
+    // checkbox handler 
     const cb = document.getElementById(`cb_${task.id}`);
     cb.addEventListener("change", async function () {
     cb.disabled = true;
-      const newStatus = cb.checked ? "done" : "to do";
+      const newStatus = cb.checked ? "done" : "to do"; //done if checked and to-do if not checked
       try {
         await updateStatus(task.id, newStatus);
       } catch (err) {
@@ -138,22 +136,23 @@ function renderColumn(containerId, tasks) {
 }
 
 //API CALLS
+//get tasks from database thru server ??? figure out each if condition
 async function loadTasks() {
   try {
     const res = await fetch(API_URL);
-    if (!res.ok) {
+    if (!res.ok) {                                        //error handling
       const errText = await res.text();
       console.error("Failed to load tasks:", errText);
       allTasks = [];
       return;
     }
     const data = await res.json();
-    if (!Array.isArray(data)) {
+    if (!Array.isArray(data)) {                          //check if data is an array, if not then turn into an array
       console.error("Unexpected tasks response:", data);
-      allTasks = [];
+      allTasks = [];                    
       return;
     }
-    allTasks = data;
+    allTasks = data;                                     //store tasks  and then display them
     renderBoard();
   } catch (err) {
     console.error("Failed to load tasks:", err);
@@ -161,7 +160,7 @@ async function loadTasks() {
   }
 }
 
-//update status
+//update for checkbox
 async function updateStatus(id, status) {
   const res = await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
@@ -172,10 +171,10 @@ async function updateStatus(id, status) {
     const txt = await res.text();
     throw new Error(txt || "Server error");
   }
-  await loadTasks();
+  await loadTasks(); //refresh tasks
 }
 
-//update any field
+//update for date, time, priority, name
 async function updateTaskField(id, field, value) {
   await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
@@ -185,14 +184,7 @@ async function updateTaskField(id, field, value) {
   await loadTasks();
 }
 
-//utility functions
-function escapeHtml(text) {
-  return String(text || "").replace(/[&<>"']/g, m =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
-  );
-}
-
-//update progress
+//update progress bar
 function updateProgress(tasks) {
   const done = tasks.filter(t => t.status === "done").length;
   const total = tasks.length;
@@ -200,19 +192,27 @@ function updateProgress(tasks) {
   document.getElementById("progressBar").style.width = percent + "%";
 }
 
+//utility functions for safe rendering
+function escapeHtml(text) {
+  return String(text || "").replace(/[&<>"']/g, m =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+  );
+}
+
 //EVENT HANDLERS
 // sorting
 loadSortFilter();
 sortBy.addEventListener("change", function () {
-  localStorage.setItem("sortBy", sortBy.value);
+  localStorage.setItem("sortBy", sortBy.value); // save selected sort option
   renderBoard();
 });
 
-// add task
+// add task 
 showFormBtn.addEventListener("click", () => {
   taskModal.classList.remove("hidden");
   setTimeout(() => document.getElementById("name").focus(), 60);
 });
+
 cancelBtn.addEventListener("click", () => taskModal.classList.add("hidden"));
 
 // add task submit
@@ -227,12 +227,12 @@ document.getElementById("taskForm").addEventListener("submit", async (e) => {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, due_date, due_time, priority, status: "to do" })
+      body: JSON.stringify({ name, due_date, due_time, priority, status: "to do" }) //does the frontend send out json?
     });
     if (!res.ok) throw new Error("Failed to add task");
-    document.getElementById("taskForm").reset();
-    taskModal.classList.add("hidden");
-    await loadTasks();
+    document.getElementById("taskForm").reset();  //clear form
+    taskModal.classList.add("hidden");            //hide modal
+    await loadTasks();                           //refresh tasks so the newly added task shows up 
   } catch (err) {
     alert("Error adding task: " + err.message);
   }
@@ -283,6 +283,7 @@ function confirmDelete(id) {
   deleteIdPending = id;
   deleteModal.classList.remove("hidden");
 }
+
 cancelDeleteBtn.addEventListener("click", () => {
   deleteIdPending = null;
   deleteModal.classList.add("hidden");
@@ -320,8 +321,9 @@ function showUndo() {
   undoTimeout = setTimeout(() => {
     undoBanner.style.display = "none";
     lastDeletedTask = null;
-  }, 5000);
+  }, 2000);
 }
+
 undoBtn.addEventListener("click", async () => {
   if (!lastDeletedTask) return;
   try {
@@ -341,5 +343,5 @@ titleToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
 });
 
-//INITIALIZATION
+//display tasks first if there are any
 loadTasks();
