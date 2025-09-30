@@ -125,7 +125,12 @@ Features to improve on:
 - drag to change status
 
 
-
-
-- separate file ang users
-- for the password recovery, pwede namna na mag-set ng questions or something                                               
+Lab 2
+- account creation (sign-up)
+    - username and email
+    - password
+    - question and answer for password recovery (who is the cutest pokemon of all time)
+    - name of user 
+        - max of 20 characters
+    - security back-up question
+    -
