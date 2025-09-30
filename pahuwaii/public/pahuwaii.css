@@ -1,16 +1,11 @@
-/* =========================================
-   Global Styles
-   ========================================= */
-
-/* Reset & global sizing */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
 }
 
-/* Default background and font */
 body {
   background: url('DO.png');
   background-size: cover;
@@ -20,16 +15,13 @@ body {
   overflow: hidden;
 }
 
-/* Apply handwritten font everywhere */
 * {
   font-family: 'Schoolbell', cursive;
 }
 
-/* =========================================
-   Kanban Layout
-   ========================================= */
 
-/* Make Kanban columns scrollable but hide scrollbar */
+/* KANBAN LAYOUT*/
+
 .kanban-scroll {
   overflow-y: auto !important;
   flex: 1 1 0%;
@@ -38,41 +30,55 @@ body {
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 }
+
 .kanban-scroll::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Webkit */
 }
 
-/* Undo banner hidden by default */
+/* hide undo banner by default */
 #undoBanner {
   display: none;
 }
 
-/* =========================================
-   Night Mode 
-   ========================================= */
+
+/* NIGHT MODE */
+
+/* Body Background & Text */
 body.dark-mode {
   background: #1a1a1a !important;
   color: #f0f0f0;
 }
+
+/* White Backgrounds → Dark Gray */
 body.dark-mode .bg-white {
   background: #393939 !important;
   color: #f0f0f0;
 }
+
+/* Black Borders → White */
 body.dark-mode .border-black {
   border-color: #ffffff !important;
 }
+
+/* Kanban Titles */
 body.dark-mode .kanban-title {
   color: #e0e0e0 !important;
 }
+
+/* Column Backgrounds */
 body.dark-mode .bg-pink-50 {
   background: #130104 !important;
 }
+
 body.dark-mode .bg-yellow-50 {
   background: #3a3a2a !important;
 }
+
 body.dark-mode .bg-green-50 {
   background: #2a3a2a !important;
 }
+
+/* Form Elements */
 body.dark-mode select,
 body.dark-mode input,
 body.dark-mode button {
