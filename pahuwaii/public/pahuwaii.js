@@ -1,4 +1,3 @@
-
 const API_URL = "/tasks"; // Backend API endpoint
 
 const statusOptions = [
@@ -20,6 +19,9 @@ let deleteIdPending = null; // tracks task pending deletion
 let lastDeletedTask = null; // stores deleted task for undo
 let undoTimeout = null;     // timeout reference for undo banner
 
+let authToken = null; // Store JWT token
+let currentUser = null;
+
 //getting DOM elements from index.html
 const taskModal = document.getElementById("taskModal");
 const showFormBtn = document.getElementById("showFormBtn");
@@ -38,6 +40,13 @@ const undoBanner = document.getElementById("undoBanner");
 const undoBtn = document.getElementById("undoBtn");
 
 const titleToggle = document.getElementById("titleToggle");
+
+// --- MODAL DOM ---
+const loginModal = document.getElementById("loginModal");
+const registerModal = document.getElementById("registerModal");
+const recoverModal = document.getElementById("recoverModal");
+
+const showViewBtn = document.getElementById("showViewBtn");
 
 //sort helper function (to make sure the selected sort option persists after refresh)
 function loadSortFilter() {
@@ -141,25 +150,20 @@ function renderColumn(containerId, tasks) {
 //API CALLS
 //get tasks from database thru server ??? figure out each if condition
 async function loadTasks() {
+  if (!authToken) {
+    // Show login modal if not logged in
+    loginModal.classList.remove("hidden");
+    return;
+  }
   try {
-    const res = await fetch(API_URL);
-    if (!res.ok) {                                        //error handling
-      const errText = await res.text();
-      console.error("Failed to load tasks:", errText);
-      allTasks = [];
-      return;
-    }
-    const data = await res.json();
-    if (!Array.isArray(data)) {                          //check if data is an array, if not then turn into an array
-      console.error("Unexpected tasks response:", data);
-      allTasks = [];                    
-      return;
-    }
-    allTasks = data;                                     //store tasks  and then display them
+    const res = await fetch("/tasks", {
+      headers: { Authorization: "Bearer " + authToken }
+    });
+    const tasks = await res.json();
+    allTasks = tasks;
     renderBoard();
   } catch (err) {
-    console.error("Failed to load tasks:", err);
-    allTasks = [];
+    alert("Failed to load tasks");
   }
 }
 
@@ -345,6 +349,152 @@ undoBtn.addEventListener("click", async () => {
 titleToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
 });
+
+// --- LOGIN FLOW ---
+showViewBtn.addEventListener("click", () => {
+  loginModal.classList.remove("hidden");
+});
+
+document.getElementById("cancelLoginBtn").onclick = () => loginModal.classList.add("hidden");
+document.getElementById("showRegisterBtn").onclick = () => {
+  loginModal.classList.add("hidden");
+  registerModal.classList.remove("hidden");
+};
+document.getElementById("showRecoverBtn").onclick = () => {
+  loginModal.classList.add("hidden");
+  recoverModal.classList.remove("hidden");
+  document.getElementById("recover_question_container").classList.add("hidden");
+};
+
+document.getElementById("loginForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("login_email").value;
+  const password = document.getElementById("login_password").value;
+  try {
+    const res = await fetch("/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      authToken = data.token;
+      currentUser = data.email;
+      loginModal.classList.add("hidden");
+      await loadTasks();
+      alert("Logged in!");
+    } else {
+      alert(data.error || "Login failed");
+    }
+  } catch (err) {
+    alert("Login error");
+  }
+};
+
+// --- REGISTER FLOW ---
+// Fetch questions and display one randomly
+async function showRegisterModal() {
+  try {
+    const res = await fetch("/recovery-questions");
+    const questions = await res.json();
+    if (questions.length === 0) throw new Error("No recovery questions found");
+    // Pick one randomly
+    const q = questions[Math.floor(Math.random() * questions.length)];
+    document.getElementById("register_question_label").textContent = q.question;
+    document.getElementById("register_question_id").value = q.id;
+    registerModal.classList.remove("hidden");
+  } catch (err) {
+    alert("Failed to load recovery questions");
+  }
+}
+
+document.getElementById("showRegisterBtn").onclick = () => {
+  loginModal.classList.add("hidden");
+  showRegisterModal();
+};
+
+document.getElementById("cancelRegisterBtn").onclick = () => registerModal.classList.add("hidden");
+document.getElementById("registerForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("register_email").value;
+  const password = document.getElementById("register_password").value;
+  const recovery_question_id = document.getElementById("register_question_id").value;
+  const recovery_answer = document.getElementById("register_answer").value;
+  try {
+    const res = await fetch("/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, recovery_question_id, recovery_answer })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      registerModal.classList.add("hidden");
+      alert("Registered! Please login.");
+      loginModal.classList.remove("hidden");
+    } else {
+      alert(data.error || "Registration failed");
+    }
+  } catch (err) {
+    alert("Registration error");
+  }
+};
+
+// --- RECOVERY FLOW ---
+document.getElementById("cancelRecoverBtn").onclick = () => recoverModal.classList.add("hidden");
+document.getElementById("recover_email").onblur = async (e) => {
+  const email = e.target.value;
+  if (!email) return;
+  try {
+    const res = await fetch("/get-recovery-question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById("recover_question_container").classList.remove("hidden");
+      document.getElementById("recover_question").textContent = data.recovery_question;
+    } else {
+      document.getElementById("recover_question_container").classList.add("hidden");
+      alert(data.error || "No recovery question found");
+    }
+  } catch (err) {
+    alert("Error fetching recovery question");
+  }
+};
+
+document.getElementById("recoverForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const email = document.getElementById("recover_email").value;
+  const recovery_answer = document.getElementById("recover_answer").value;
+  const new_password = document.getElementById("recover_new_password").value;
+  try {
+    const res = await fetch("/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, recovery_answer, new_password })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      recoverModal.classList.add("hidden");
+      alert("Password reset! Please login.");
+      loginModal.classList.remove("hidden");
+    } else {
+      alert(data.error || "Recovery failed");
+    }
+  } catch (err) {
+    alert("Recovery error");
+  }
+};
+
+// --- LOGOUT (optional) ---
+function logout() {
+  authToken = null;
+  currentUser = null;
+  allTasks = [];
+  renderBoard();
+  loginModal.classList.remove("hidden");
+}
 
 //display tasks first if there are any
 loadTasks();
