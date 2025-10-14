@@ -1,5 +1,4 @@
-
-const API_URL = "/tasks"; // Backend API endpoint
+const API_URL = "/tasks";
 
 const statusOptions = [
   { value: "to do", label: "to do" },
@@ -14,13 +13,16 @@ const priorityColors = {
   "do last": "bg-[#99c2a5] text-black"
 };
 
-let allTasks = [];         // holds all tasks from server
-let editingTaskId = null;  // tracks task being edited
-let deleteIdPending = null; // tracks task pending deletion
-let lastDeletedTask = null; // stores deleted task for undo
-let undoTimeout = null;     // timeout reference for undo banner
+let allTasks = [];
+let editingTaskId = null;
+let deleteIdPending = null;
+let lastDeletedTask = null;
+let undoTimeout = null;
 
-//getting DOM elements from index.html
+let authToken = localStorage.getItem("authToken") || null;
+let currentUser = null;
+
+// DOM elements
 const taskModal = document.getElementById("taskModal");
 const showFormBtn = document.getElementById("showFormBtn");
 const cancelBtn = document.getElementById("cancelBtn");
@@ -38,8 +40,9 @@ const undoBanner = document.getElementById("undoBanner");
 const undoBtn = document.getElementById("undoBtn");
 
 const titleToggle = document.getElementById("titleToggle");
+const showViewBtn = document.getElementById("showViewBtn");
 
-//sort helper function (to make sure the selected sort option persists after refresh)
+// --- Kanban Board Rendering ---
 function loadSortFilter() {
   const savedSort = localStorage.getItem("sortBy") || "date_added";
   sortBy.value = savedSort;
@@ -343,5 +346,10 @@ titleToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
 });
 
-//display tasks first if there are any
+
+// --- Initialization ---
 loadTasks();
+
+
+
+
