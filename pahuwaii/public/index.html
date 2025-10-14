@@ -6,17 +6,15 @@
 
   <!-- Tailwind CSS  -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
-
   <!-- Material Symbols -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-
   <link rel="stylesheet" href="pahuwaii.css" />
 </head>
 
 <body class="min-h-screen flex flex-col items-center p-8"> 
+
 
   <div class="flex justify-between items-center w-[96%] max-w-7xl mb-6">
     <!-- toggle for nightmode -->
@@ -139,61 +137,6 @@
   <div id="undoBanner" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white px-4 py-2 rounded shadow-lg flex items-center gap-4">
     <span>Task deleted</span>
     <button id="undoBtn" class="bg-white text-black px-2 py-1 rounded">Undo</button>
-  </div>
-
-  <!-- LOGIN MODAL -->
-  <div id="loginModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
-    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-      <h2 class="text-2xl kanban-title font-bold mb-4">Login</h2>
-      <form id="loginForm" class="grid grid-cols-1 gap-3">
-        <input type="email" id="login_email" placeholder="Email" required class="border p-2 rounded">
-        <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
-        <div class="flex justify-between mt-2">
-          <button type="button" id="showRegisterBtn" class="text-blue-600 underline">Register</button>
-          <button type="button" id="showRecoverBtn" class="text-blue-600 underline">Forgot Password?</button>
-        </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="cancelLoginBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded">Login</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- REGISTER MODAL -->
-  <div id="registerModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
-    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-      <h2 class="text-2xl kanban-title font-bold mb-4">Register</h2>
-      <form id="registerForm" class="grid grid-cols-1 gap-3">
-        <input type="email" id="register_email" placeholder="Email" required class="border p-2 rounded">
-        <input type="password" id="register_password" placeholder="Password" required class="border p-2 rounded">
-        <input type="text" id="register_question" placeholder="Recovery Question" required class="border p-2 rounded">
-        <input type="text" id="register_answer" placeholder="Recovery Answer" required class="border p-2 rounded">
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="cancelRegisterBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded">Register</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- RECOVER MODAL -->
-  <div id="recoverModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded">
-    <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-      <h2 class="text-2xl kanban-title font-bold mb-4">Password Recovery</h2>
-      <form id="recoverForm" class="grid grid-cols-1 gap-3">
-        <input type="email" id="recover_email" placeholder="Email" required class="border p-2 rounded">
-        <div id="recover_question_container" class="hidden">
-          <label id="recover_question" class="mb-2"></label>
-          <input type="text" id="recover_answer" placeholder="Your Answer" class="border p-2 rounded">
-          <input type="password" id="recover_new_password" placeholder="New Password" class="border p-2 rounded">
-        </div>
-        <div class="flex justify-end gap-2 mt-4">
-          <button type="button" id="cancelRecoverBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
-          <button type="submit" id="recoverSubmitBtn" class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded">Recover</button>
-        </div>
-      </form>
-    </div>
   </div>
 
   <!-- js script -->

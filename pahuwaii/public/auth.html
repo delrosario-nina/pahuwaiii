@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auth - Pahuwaii</title>
+  <link rel="stylesheet" href="pahuwaii.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
+  <link rel="stylesheet" href="pahuwaii.css" />
+</head>
+
+<body class="flex flex-col items-center justify-center min-h-screen">
+
+
+  <h1 class="text-5xl font-bold mb-6">pahuwaii : 3</h1>
+  <div id="authContainer" class="bg-white p-8 rounded shadow w-full max-w-md flex flex-col gap-6">
+    <!-- Login Form -->
+    <form id="loginForm" class="flex flex-col gap-4">
+      <input type="name" id="login_name" placeholder="Name" required class="border p-2 rounded">
+      <input type="email" id="login_email" placeholder="Email" required class="border p-2 rounded">
+      <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
+      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Login</button>
+      <div class="flex justify-between mt-2">
+        <a href="#" id="showSignup" class="text-blue-600 underline">Sign Up</a>
+        <a href="#" id="showReset" class="text-blue-600 underline">Forgot Password?</a>
+      </div>
+    </form>
+    <!-- Signup Form -->
+    <form id="signupForm" class="flex flex-col gap-4 hidden">
+      <input type="text" id="signup_name" placeholder="Name" required class="border p-2 rounded">
+      <input type="email" id="signup_email" placeholder="Email" required class="border p-2 rounded">
+      <input type="password" id="signup_password" placeholder="Password" required class="border p-2 rounded">
+      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Sign Up</button>
+      <div class="flex justify-between mt-2">
+        <a href="#" id="showLogin" class="text-blue-600 underline">Already have an account?</a>
+      </div>
+    </form>
+    <!-- Reset Request Form -->
+    <form id="resetRequestForm" class="flex flex-col gap-4 hidden">
+      <input type="email" id="reset_email" placeholder="Your Email" required class="border p-2 rounded">
+      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Send Reset Link</button>
+      <div class="flex justify-between mt-2">
+        <a href="#" id="showLoginFromReset" class="text-blue-600 underline">Back to Login</a>
+      </div>
+    </form>
+    <!-- Reset Password Form (shown if token in URL) -->
+    <form id="resetForm" class="flex flex-col gap-4 hidden">
+      <input type="password" id="reset_new_password" placeholder="New Password" required class="border p-2 rounded">
+      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Set New Password</button>
+      <div class="flex justify-between mt-2">
+        <a href="#" id="showLoginFromSet" class="text-blue-600 underline">Back to Login</a>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    // Show/hide forms
+    const loginForm = document.getElementById("loginForm");
+    const signupForm = document.getElementById("signupForm");
+    const resetRequestForm = document.getElementById("resetRequestForm");
+    const resetForm = document.getElementById("resetForm");
+
+    function showLogin() {
+      loginForm.classList.remove("hidden");
+      signupForm.classList.add("hidden");
+      resetRequestForm.classList.add("hidden");
+      resetForm.classList.add("hidden");
+    }
+    function showSignup() {
+      loginForm.classList.add("hidden");
+      signupForm.classList.remove("hidden");
+      resetRequestForm.classList.add("hidden");
+      resetForm.classList.add("hidden");
+    }
+    function showResetRequest() {
+      loginForm.classList.add("hidden");
+      signupForm.classList.add("hidden");
+      resetRequestForm.classList.remove("hidden");
+      resetForm.classList.add("hidden");
+    }
+    function showResetForm() {
+      loginForm.classList.add("hidden");
+      signupForm.classList.add("hidden");
+      resetRequestForm.classList.add("hidden");
+      resetForm.classList.remove("hidden");
+    }
+
+    document.getElementById("showSignup").onclick = (e) => { e.preventDefault(); showSignup(); };
+    document.getElementById("showLogin").onclick = (e) => { e.preventDefault(); showLogin(); };
+    document.getElementById("showReset").onclick = (e) => { e.preventDefault(); showResetRequest(); };
+    document.getElementById("showLoginFromReset").onclick = (e) => { e.preventDefault(); showLogin(); };
+    document.getElementById("showLoginFromSet").onclick = (e) => { e.preventDefault(); showLogin(); };
+
+    // Show reset form if token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    if (token) showResetForm();
+
+    // Login
+    loginForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("login_name").value;
+      const email = document.getElementById("login_email").value;
+      const password = document.getElementById("login_password").value;
+      const res = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: name, email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("authToken", data.token);
+        window.location.href = "index.html";
+      } else {
+        alert(data.error || "Login failed");
+      }
+    };
+
+    // Signup
+    signupForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("signup_name").value;
+      const email = document.getElementById("signup_email").value;
+      const password = document.getElementById("signup_password").value;
+      const res = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Registered! Please login.");
+        showLogin();
+      } else {
+        alert(data.error || "Registration failed");
+      }
+    };
+
+    // Request password reset
+    resetRequestForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("reset_email").value;
+      const res = await fetch("/request-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Check your email for a reset link. (In dev, check server console for the link.)");
+        showLogin();
+      } else {
+        alert(data.error || "Reset request failed");
+      }
+    };
+
+    // Set new password
+    resetForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const new_password = document.getElementById("reset_new_password").value;
+      const res = await fetch("/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, new_password })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert("Password reset! Please login.");
+        showLogin();
+      } else {
+        alert(data.error || "Reset failed");
+      }
+    };
+
+    // Default to login form
+    if (!token) showLogin();
+  </script>
+</body>
+</html>

@@ -4,6 +4,8 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = "supersecret"; // Add this at the top
 
 const app = express();
 app.use(cors());              //cors is needed for local testing with live server extension 
@@ -24,20 +26,14 @@ const db = new sqlite3.Database("todo.db", (err) => {
 db.serialize(() => {
   db.run("PRAGMA foreign_keys = ON;");
   db.run(`
-    CREATE TABLE IF NOT EXISTS recovery_questions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      question TEXT NOT NULL
-    )
-  `);
-  db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      recovery_question_id INTEGER NOT NULL,
-      recovery_answer TEXT NOT NULL,
-      created_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY(recovery_question_id) REFERENCES recovery_questions(id)
+      reset_token TEXT,
+      reset_token_expiry INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
     )
   `);
   db.run(`
@@ -53,97 +49,6 @@ db.serialize(() => {
       user_id INTEGER
     )
   `);
-
-  // Seed questions if empty
-  db.all("SELECT COUNT(*) as cnt FROM recovery_questions", (err, rows) => {
-    if (!err && rows[0].cnt === 0) {
-      const questions = [
-        "What is your favorite color?",
-        "What is your mother's maiden name?",
-        "What was the name of your first pet?",
-        "What city were you born in?",
-        "What is your favorite food?"
-      ];
-      questions.forEach(q => {
-        db.run("INSERT INTO recovery_questions (question) VALUES (?)", [q]);
-      });
-    }
-  });
-});
-
-// Endpoint to get all recovery questions
-app.get("/recovery-questions", (req, res) => {
-  db.all("SELECT id, question FROM recovery_questions", (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
-});
-
-// ========== USER REGISTRATION ==========
-app.post("/register", async (req, res) => {
-  const { email, password, recovery_question_id, recovery_answer } = req.body;
-  if (!email || !password || !recovery_question_id || !recovery_answer)
-    return res.status(400).json({ error: "Missing fields" });
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedAnswer = await bcrypt.hash(recovery_answer, 10);
-    db.run(
-      `INSERT INTO users (email, password, recovery_question_id, recovery_answer) VALUES (?, ?, ?, ?)`,
-      [email, hashedPassword, recovery_question_id, hashedAnswer],
-      function (err) {
-        if (err) return res.status(400).json({ error: err.message });
-        res.json({ id: this.lastID, email });
-      }
-    );
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ========== PASSWORD RECOVERY ==========
-app.post("/recover", async (req, res) => {
-  const { email, recovery_answer, new_password } = req.body;
-  if (!email || !recovery_answer || !new_password)
-    return res.status(400).json({ error: "Missing fields" });
-
-  db.get(
-    "SELECT * FROM users WHERE email = ?",
-    [email],
-    async (err, user) => {
-      if (err || !user)
-        return res.status(404).json({ error: "User not found" });
-
-      const match = await bcrypt.compare(recovery_answer, user.recovery_answer);
-      if (!match)
-        return res.status(401).json({ error: "Incorrect recovery answer" });
-
-      const hashedNewPassword = await bcrypt.hash(new_password, 10);
-      db.run(
-        "UPDATE users SET password = ? WHERE id = ?",
-        [hashedNewPassword, user.id],
-        function (updateErr) {
-          if (updateErr)
-            return res.status(500).json({ error: updateErr.message });
-          res.json({ success: true });
-        }
-      );
-    }
-  );
-});
-
-// Get recovery question for a user by email
-app.post("/get-recovery-question", (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "Missing email" });
-  db.get(
-    `SELECT q.question FROM users u JOIN recovery_questions q ON u.recovery_question_id = q.id WHERE u.email = ?`,
-    [email],
-    (err, row) => {
-      if (err || !row)
-        return res.status(404).json({ error: "User not found" });
-      res.json({ recovery_question: row.question });
-    }
-  );
 });
 
 // ========== API ==========
@@ -222,6 +127,52 @@ app.post("/tasks/:id/undo", (req, res) => {
 app.post("/debug", (req, res) => {
   console.log("DEBUG POST body:", req.body);
   res.json({ received: req.body });
+});
+
+
+// Place this BEFORE the fallback route!
+app.post("/login", (req, res) => {
+  const { identifier, password } = req.body;
+  db.get(
+    "SELECT * FROM users WHERE email = ? OR name = ?",
+    [identifier, identifier],
+    async (err, user) => {
+      if (err || !user) return res.status(401).json({ error: "Invalid credentials" });
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) return res.status(401).json({ error: "Invalid credentials" });
+      // Issue JWT
+      const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+      res.json({ token, name: user.name, email: user.email });
+    }
+  );
+});
+
+// Request password reset
+app.post("/request-reset", (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: "Missing email" });
+  db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
+    if (err || !user) return res.status(404).json({ error: "User not found" });
+    const token = require("crypto").randomBytes(32).toString("hex");
+    const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
+    db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
+    // TODO: Send email with token link (use nodemailer in production)
+    console.log(`Password reset link: http://localhost:3000/reset-password.html?token=${token}`);
+    res.json({ success: true, message: "Reset link sent to email (check console in dev)" });
+  });
+});
+
+// Reset password
+app.post("/reset-password", async (req, res) => {
+  const { token, new_password } = req.body;
+  if (!token || !new_password) return res.status(400).json({ error: "Missing fields" });
+  db.get("SELECT * FROM users WHERE reset_token = ?", [token], async (err, user) => {
+    if (err || !user || user.reset_token_expiry < Date.now())
+      return res.status(400).json({ error: "Invalid or expired token" });
+    const hashed = await bcrypt.hash(new_password, 10);
+    db.run("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?", [hashed, user.id]);
+    res.json({ success: true });
+  });
 });
 
 // fallback to serve index.html for any other route to ensure it stays a single page
