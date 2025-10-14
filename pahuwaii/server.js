@@ -5,7 +5,10 @@ const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "supersecret"; // Add this at the top
+const JWT_SECRET = "supersecret";
+const nodemailer = require("nodemailer"); //
+
+
 
 const app = express();
 app.use(cors());              //cors is needed for local testing with live server extension 
@@ -130,12 +133,60 @@ app.post("/debug", (req, res) => {
 });
 
 
-// Place this BEFORE the fallback route!
+
+//
+//No need to anything before this code nina >:(
+//
+
+
+
+
+//For signup (error checking bcoz its a bitch)
+app.post("/signup", (req, res) => {
+  const { name, email, password } = req.body;
+  console.log("Signup request:", req.body);
+
+  if (!name || !email || !password) {
+    console.log("Missing fields");
+    return res.status(400).json({ error: "Missing fields" });
+  }
+
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
+    if (err) {
+      console.error("DB error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (user) {
+      console.log("Email already exists:", email);
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    console.log("Hashed password:", hashed);
+
+    db.run(
+      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+      [name, email, hashed],
+      function (insertErr) {
+        if (insertErr) {
+          console.error("Insert error:", insertErr);
+          return res.status(500).json({ error: insertErr.message });
+        }
+        console.log("User inserted successfully:", name);
+        res.json({ id: this.lastID, name, email });
+      }
+    );
+  });
+});
+
+
+
+// For login
 app.post("/login", (req, res) => {
-  const { identifier, password } = req.body;
+  const { name, password } = req.body;
   db.get(
-    "SELECT * FROM users WHERE email = ? OR name = ?",
-    [identifier, identifier],
+    "SELECT * FROM users WHERE name = ?",
+    [name],
     async (err, user) => {
       if (err || !user) return res.status(401).json({ error: "Invalid credentials" });
       const match = await bcrypt.compare(password, user.password);
@@ -147,6 +198,73 @@ app.post("/login", (req, res) => {
   );
 });
 
+
+//Getting data to display for the profile
+app.get("/profile", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+  const token = authHeader.split(" ")[1];
+  let userId;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    userId = decoded.user_id;
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+  db.get("SELECT name, email FROM users WHERE id = ?", [userId], (err, user) => {
+    if (err || !user) return res.status(404).json({ error: "User not found" });
+    res.json(user);
+  });
+});
+
+
+// Editing the profile
+app.patch("/profile", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+  const token = authHeader.split(" ")[1];
+  let userId;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    userId = decoded.user_id;
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  const { name, email, password } = req.body;
+  let fields = [];
+  let values = [];
+  if (name) { fields.push("name = ?"); values.push(name); }
+  if (email) { fields.push("email = ?"); values.push(email); }
+  if (password) {
+    bcrypt.hash(password, 10, (err, hashed) => {
+      if (err) return res.status(500).json({ error: err.message });
+      fields.push("password = ?"); values.push(hashed);
+      values.push(userId);
+      db.run(
+        `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
+        values,
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ updated: this.changes });
+        }
+      );
+    });
+    return;
+  }
+  if (!fields.length) return res.status(400).json({ error: "No fields to update" });
+  values.push(userId);
+  db.run(
+    `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
+    values,
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ updated: this.changes });
+    }
+  );
+});
+
+
 // Request password reset
 app.post("/request-reset", (req, res) => {
   const { email } = req.body;
@@ -156,9 +274,27 @@ app.post("/request-reset", (req, res) => {
     const token = require("crypto").randomBytes(32).toString("hex");
     const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
     db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
-    // TODO: Send email with token link (use nodemailer in production)
-    console.log(`Password reset link: http://localhost:3000/reset-password.html?token=${token}`);
-    res.json({ success: true, message: "Reset link sent to email (check console in dev)" });
+    // Send email with token link
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "nedelrosario@up.edu.ph",
+        pass: process.env.EMAIL_APP_PASSWORD
+      }
+    });
+    const mailOptions = {
+      from: "nedelrosario@up.edu.ph",
+      to: email,
+      subject: "Pahuwaii Password Reset",
+      text: `Click this link to reset your password: http://localhost:3000/auth.html?token=${token}`
+    };
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Failed to send email" });
+      }
+      res.json({ success: true, message: "Reset link sent to email" });
+    });
   });
 });
 
@@ -176,12 +312,10 @@ app.post("/reset-password", async (req, res) => {
 });
 
 // fallback to serve index.html for any other route to ensure it stays a single page
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 // Start server on PORT env or 3000 by default
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running!`);
+  console.log(`Login/Signup: http://localhost:${PORT}/auth.html`);
+  console.log(`To-Do List:   http://localhost:${PORT}/index.html`);
 });

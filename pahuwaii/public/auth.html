@@ -6,112 +6,208 @@
   <link rel="stylesheet" href="pahuwaii.css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
-  <link rel="stylesheet" href="pahuwaii.css" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
 </head>
+<body class="flex flex-col items-center justify-center min-h-screen bg-[#fafafa]">
 
-<body class="flex flex-col items-center justify-center min-h-screen">
+  <!-- Landing Section -->
+  <div id="landing" class="flex flex-col items-center justify-center min-h-screen">
+    <h1 class="text-7xl font-bold mb-5" style="font-family: 'Schoolbell', cursive;">pahuwaii : 3</h1>
+    <p class="mb-8 text-xl text-center">a minimalist to-do list app for those who seeks peace in a world full of chaos</p>
+    <button id="getStartedBtn" class="px-8 py-2 bg-purple-100 border rounded text-xl hover:bg-purple-200">let's get started!</button>
+  </div>
+
+  <!-- Login/Signup Modal -->
+  <div id="authModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+      <div class="flex justify-center gap-4 mb-4">
+        <button id="showLoginBtn" class="px-4 py-2 bg-gray-200 rounded">Login</button>
+        <button id="showSignupBtn" class="px-4 py-2 bg-gray-200 rounded">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="flex flex-col gap-4">
+        <input type="text" id="login_name" placeholder="Name" required class="border p-2 rounded">
+        <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
+        <a href="#" id="forgotPasswordLink" class="text-gray-600 text-left-2">Forgot Password?</a>
+        <button type="submit" class="bg-[#29810E] text-white px-4 py-2 rounded hover:bg-[#174908]">Login</button>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signupForm" class="flex flex-col gap-4 hidden">
+        <input type="text" id="signup_name" placeholder="Name" required class="border p-2 rounded">
+        <input type="email" id="signup_email" placeholder="Email" required class="border p-2 rounded">
+        <input type="password" id="signup_password" placeholder="Password" required class="border p-2 rounded">
+        <a href="#" id="forgotPasswordLink" class="text-gray-600 text-left-2 mt-2">Forgot Password?</a>
+        <button type="submit" class="bg-[#29810E] text-white px-4 py-2 rounded hover:bg-[#174908]">Sign Up</button>
+      </form>
+      <button id="closeAuthModal" class="mt-2 text-gray-500 hover:text-black">Cancel</button>
+      
+    </div>
+  </div>
+
+  <!-- Password Reset Modal -->
+  <div id="resetModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+      <h2 class="text-2xl font-bold mb-4">Reset Password</h2>
+      <form id="resetRequestForm" class="flex flex-col gap-4">
+        <input type="email" id="reset_email" placeholder="Your Email" required class="border p-2 rounded">
+        <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Send Reset Link</button>
+      </form>
+      <button id="closeResetModal" class="mt-2 text-gray-500 hover:text-black">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Set New Password Modal -->
+  <div id="setPasswordModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+      <h2 class="text-2xl font-bold mb-4">Set New Password</h2>
+      <form id="setPasswordForm" class="flex flex-col gap-4">
+        <input type="password" id="new_password" placeholder="New Password" required class="border p-2 rounded">
+        <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Set Password</button>
+      </form>
+      <button id="closeSetPasswordModal" class="mt-2 text-gray-500 hover:text-black">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Profile Card -->
+   <div id="profileCard" class="hidden flex flex-col items-center justify-center min-h-screen p-8">
+  <div class="relative bg-white shadow-2xl p-10 w-full max-w-5xl flex flex-row gap-10 border-4 border-black"
+       style="font-family: 'Schoolbell', cursive; border-radius: 28px; aspect-ratio: 16 / 8;">
+
+    <!-- Profile Info Section -->
+    <div class="flex flex-col items-center flex-1 justify-center">
+      <h2 class="text-4xl font-bold mb-4">Profile :]</h2>
+      <span class="material-icons-outlined text-[120px] mb-2 border-4 border-black rounded-full">account_circle</span>
+
+      <div class="text-left w-full max-w-xs text-xl">
+        <div class="flex items-center gap-2 mb-2">
+          <span id="profile_name_display" class="font-bold underline"></span>
+          <span id="editNameBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Name">edit</span>
+        </div>
+
+        <div class="mb-2">
+          <span class="font-bold">Email:</span>
+          <span id="profile_email_display"></span>
+          <span id="editEmailBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Email">edit</span>
+        </div>
+
+        <div class="flex items-center gap-2 mb-2">
+          <span class="font-bold">Bio:</span>
+          <span id="profile_bio_display" class="italic">insert bio here</span>
+          <span id="editBioBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Bio">edit</span>
+        </div>
+      </div>
+
+      <button id="saveProfileBtn"
+        class="mt-4 px-6 py-2 bg-green-300 border-2 border-black rounded-xl text-lg font-semibold hover:bg-green-400 transition-all">
+        Save Updated Profile
+      </button>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="flex flex-col flex-1 border-4 border-black p-6 bg-gray-100 justify-center"
+         style="border-radius: 20px;">
+      <h3 class="text-3xl font-bold mb-4 text-center">Settings ⚙️</h3>
+
+      <div class="mb-6">
+        <div class="text-2xl font-bold mb-3">Account</div>
+        <button id="changePasswordBtn"
+          class="w-full bg-white border-2 border-black rounded-xl p-3 mb-3 text-left text-lg hover:bg-gray-200 transition-all">
+          Change your Password
+        </button>
+        <button id="deleteAccountBtn"
+          class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg text-red-500 hover:bg-red-100 transition-all">
+          Delete your account
+        </button>
+      </div>
+
+      <div>
+        <div class="text-2xl font-bold mb-3">Accessibility</div>
+        <label class="flex items-center gap-3 mb-2 text-lg">
+          <input type="checkbox" id="darkModeToggle" class="w-5 h-5 accent-black">
+          <span>Turn on <span class="font-bold">Dark Mode</span></span>
+        </label>
+        <label class="flex items-center gap-3 text-lg">
+          <input type="checkbox" id="catModeToggle" class="w-5 h-5 accent-black">
+          <span><span class="font-bold">Cat Mode</span></span>
+        </label>
+      </div>
+    </div>
+  </div>
+  <button id="logoutBtn"
+      class="absolute top-6 right-6 px-6 py-2 bg-red-300 border-4 border-black rounded-xl text-xl font-bold hover:bg-red-400 transition-all">
+      SIGN OUT
+    </button>
+</div>
 
 
-  <h1 class="text-5xl font-bold mb-6">pahuwaii : 3</h1>
-  <div id="authContainer" class="bg-white p-8 rounded shadow w-full max-w-md flex flex-col gap-6">
-    <!-- Login Form -->
-    <form id="loginForm" class="flex flex-col gap-4">
-      <input type="name" id="login_name" placeholder="Name" required class="border p-2 rounded">
-      <input type="email" id="login_email" placeholder="Email" required class="border p-2 rounded">
-      <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
-      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Login</button>
-      <div class="flex justify-between mt-2">
-        <a href="#" id="showSignup" class="text-blue-600 underline">Sign Up</a>
-        <a href="#" id="showReset" class="text-blue-600 underline">Forgot Password?</a>
+
+  <!-- Edit Field Modal -->
+  <div id="editFieldModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm flex flex-col gap-4">
+      <h2 id="editFieldTitle" class="text-xl font-bold mb-2"></h2>
+      <input id="editFieldInput" type="text" class="border p-2 rounded" />
+      <div class="flex justify-end gap-2 mt-4">
+        <button id="cancelEditFieldBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+        <button id="saveEditFieldBtn" class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded">Save</button>
       </div>
-    </form>
-    <!-- Signup Form -->
-    <form id="signupForm" class="flex flex-col gap-4 hidden">
-      <input type="text" id="signup_name" placeholder="Name" required class="border p-2 rounded">
-      <input type="email" id="signup_email" placeholder="Email" required class="border p-2 rounded">
-      <input type="password" id="signup_password" placeholder="Password" required class="border p-2 rounded">
-      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Sign Up</button>
-      <div class="flex justify-between mt-2">
-        <a href="#" id="showLogin" class="text-blue-600 underline">Already have an account?</a>
-      </div>
-    </form>
-    <!-- Reset Request Form -->
-    <form id="resetRequestForm" class="flex flex-col gap-4 hidden">
-      <input type="email" id="reset_email" placeholder="Your Email" required class="border p-2 rounded">
-      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Send Reset Link</button>
-      <div class="flex justify-between mt-2">
-        <a href="#" id="showLoginFromReset" class="text-blue-600 underline">Back to Login</a>
-      </div>
-    </form>
-    <!-- Reset Password Form (shown if token in URL) -->
-    <form id="resetForm" class="flex flex-col gap-4 hidden">
-      <input type="password" id="reset_new_password" placeholder="New Password" required class="border p-2 rounded">
-      <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Set New Password</button>
-      <div class="flex justify-between mt-2">
-        <a href="#" id="showLoginFromSet" class="text-blue-600 underline">Back to Login</a>
-      </div>
-    </form>
+    </div>
   </div>
 
   <script>
-    // Show/hide forms
+    const landing = document.getElementById("landing");
+    const authModal = document.getElementById("authModal");
+    const profileCard = document.getElementById("profileCard");
     const loginForm = document.getElementById("loginForm");
     const signupForm = document.getElementById("signupForm");
-    const resetRequestForm = document.getElementById("resetRequestForm");
-    const resetForm = document.getElementById("resetForm");
+    const showLoginBtn = document.getElementById("showLoginBtn");
+    const showSignupBtn = document.getElementById("showSignupBtn");
+    const closeAuthModal = document.getElementById("closeAuthModal");
+
+    let authToken = localStorage.getItem("authToken") || null;
+    let currentUser = null;
+
+    // Show modal
+    document.getElementById("getStartedBtn").onclick = () => {
+      authModal.classList.remove("hidden");
+      landing.classList.add("hidden");
+      showLogin();
+    };
+
+    closeAuthModal.onclick = () => {
+      authModal.classList.add("hidden");
+      landing.classList.remove("hidden");
+    };
+
+    showLoginBtn.onclick = showLogin;
+    showSignupBtn.onclick = showSignup;
 
     function showLogin() {
       loginForm.classList.remove("hidden");
       signupForm.classList.add("hidden");
-      resetRequestForm.classList.add("hidden");
-      resetForm.classList.add("hidden");
     }
     function showSignup() {
       loginForm.classList.add("hidden");
       signupForm.classList.remove("hidden");
-      resetRequestForm.classList.add("hidden");
-      resetForm.classList.add("hidden");
     }
-    function showResetRequest() {
-      loginForm.classList.add("hidden");
-      signupForm.classList.add("hidden");
-      resetRequestForm.classList.remove("hidden");
-      resetForm.classList.add("hidden");
-    }
-    function showResetForm() {
-      loginForm.classList.add("hidden");
-      signupForm.classList.add("hidden");
-      resetRequestForm.classList.add("hidden");
-      resetForm.classList.remove("hidden");
-    }
-
-    document.getElementById("showSignup").onclick = (e) => { e.preventDefault(); showSignup(); };
-    document.getElementById("showLogin").onclick = (e) => { e.preventDefault(); showLogin(); };
-    document.getElementById("showReset").onclick = (e) => { e.preventDefault(); showResetRequest(); };
-    document.getElementById("showLoginFromReset").onclick = (e) => { e.preventDefault(); showLogin(); };
-    document.getElementById("showLoginFromSet").onclick = (e) => { e.preventDefault(); showLogin(); };
-
-    // Show reset form if token in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-    if (token) showResetForm();
 
     // Login
     loginForm.onsubmit = async (e) => {
       e.preventDefault();
       const name = document.getElementById("login_name").value;
-      const email = document.getElementById("login_email").value;
       const password = document.getElementById("login_password").value;
       const res = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: name, email, password })
+        body: JSON.stringify({ name, password })
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.setItem("authToken", data.token);
-        window.location.href = "index.html";
+        authToken = data.token;
+        localStorage.setItem("authToken", authToken);
+        currentUser = data;
+        showProfile();
       } else {
         alert(data.error || "Login failed");
       }
@@ -123,7 +219,7 @@
       const name = document.getElementById("signup_name").value;
       const email = document.getElementById("signup_email").value;
       const password = document.getElementById("signup_password").value;
-      const res = await fetch("/register", {
+      const res = await fetch("/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password })
@@ -137,8 +233,151 @@
       }
     };
 
+    // Show profile info
+    function showProfile() {
+      authModal.classList.add("hidden");
+      landing.classList.add("hidden");
+      profileCard.classList.remove("hidden");
+      document.getElementById("profile_name_display").textContent = currentUser.name || "";
+      document.getElementById("profile_email_display").textContent = currentUser.email || "";
+      document.getElementById("profile_bio_display").textContent = currentUser.bio || "insert bio here";
+    }
+
+    // Edit name/email/bio
+    document.getElementById("editNameBtn").onclick = () => {
+      const newName = prompt("Enter new name:", currentUser.name);
+      if (newName) currentUser.name = newName;
+      document.getElementById("profile_name_display").textContent = currentUser.name;
+    };
+    document.getElementById("editEmailBtn").onclick = () => {
+      const newEmail = prompt("Enter new email:", currentUser.email);
+      if (newEmail) currentUser.email = newEmail;
+      document.getElementById("profile_email_display").textContent = currentUser.email;
+    };
+    document.getElementById("editBioBtn").onclick = () => {
+      const newBio = prompt("Enter new bio:", currentUser.bio || "");
+      if (newBio !== null) currentUser.bio = newBio;
+      document.getElementById("profile_bio_display").textContent = currentUser.bio;
+    };
+
+    // Save profile
+    document.getElementById("saveProfileBtn").onclick = async () => {
+      try {
+        const res = await fetch("/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + authToken
+          },
+          body: JSON.stringify({ name: currentUser.name, email: currentUser.email, bio: currentUser.bio })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Profile updated!");
+        } else {
+          alert(data.error || "Profile update failed");
+        }
+      } catch (err) {
+        alert("Profile update error");
+      }
+    };
+
+    // Change password
+    document.getElementById("changePasswordBtn").onclick = async () => {
+      const newPassword = prompt("Enter new password:");
+      if (!newPassword) return;
+      try {
+        const res = await fetch("/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + authToken
+          },
+          body: JSON.stringify({ password: newPassword })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert("Password updated!");
+        } else {
+          alert(data.error || "Password update failed");
+        }
+      } catch (err) {
+        alert("Password update error");
+      }
+    };
+
+    // Delete account
+    document.getElementById("deleteAccountBtn").onclick = async () => {
+      if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
+      try {
+        const res = await fetch("/profile", {
+          method: "DELETE",
+          headers: {
+            Authorization: "Bearer " + authToken
+          }
+        });
+        if (res.ok) {
+          alert("Account deleted.");
+          localStorage.removeItem("authToken");
+          window.location.reload();
+        } else {
+          const data = await res.json();
+          alert(data.error || "Delete failed");
+        }
+      } catch (err) {
+        alert("Delete error");
+      }
+    };
+
+    // Logout
+    document.getElementById("logoutBtn").onclick = () => {
+      authToken = null;
+      currentUser = null;
+      localStorage.removeItem("authToken");
+      profileCard.classList.add("hidden");
+      landing.classList.remove("hidden");
+    };
+
+    // If already logged in, show profile
+    if (authToken) {
+      // Try to fetch user info from backend
+      fetch("/profile", {
+        method: "GET",
+        headers: { Authorization: "Bearer " + authToken }
+      })
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => {
+          currentUser = data;
+          showProfile();
+        })
+        .catch(() => {
+          // Invalid token, show landing
+          localStorage.removeItem("authToken");
+          authToken = null;
+          currentUser = null;
+          landing.classList.remove("hidden");
+          profileCard.classList.add("hidden");
+        });
+    } else {
+      landing.classList.remove("hidden");
+      profileCard.classList.add("hidden");
+    }
+
+    // Show reset modal
+    document.getElementById("forgotPasswordLink").onclick = (e) => {
+      e.preventDefault();
+      document.getElementById("resetModal").classList.remove("hidden");
+      authModal.classList.add("hidden");
+    };
+
+    // Close reset modal
+    document.getElementById("closeResetModal").onclick = () => {
+      document.getElementById("resetModal").classList.add("hidden");
+      authModal.classList.remove("hidden");
+    };
+
     // Request password reset
-    resetRequestForm.onsubmit = async (e) => {
+    document.getElementById("resetRequestForm").onsubmit = async (e) => {
       e.preventDefault();
       const email = document.getElementById("reset_email").value;
       const res = await fetch("/request-reset", {
@@ -149,16 +388,33 @@
       const data = await res.json();
       if (res.ok) {
         alert("Check your email for a reset link. (In dev, check server console for the link.)");
-        showLogin();
+        document.getElementById("resetModal").classList.add("hidden");
+        authModal.classList.remove("hidden");
       } else {
         alert(data.error || "Reset request failed");
       }
     };
 
+    // Show set password modal if token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token");
+    if (token) {
+      landing.classList.add("hidden");
+      authModal.classList.add("hidden");
+      profileCard.classList.add("hidden");
+      document.getElementById("setPasswordModal").classList.remove("hidden");
+    }
+
+    // Close set password modal
+    document.getElementById("closeSetPasswordModal").onclick = () => {
+      document.getElementById("setPasswordModal").classList.add("hidden");
+      landing.classList.remove("hidden");
+    };
+
     // Set new password
-    resetForm.onsubmit = async (e) => {
+    document.getElementById("setPasswordForm").onsubmit = async (e) => {
       e.preventDefault();
-      const new_password = document.getElementById("reset_new_password").value;
+      const new_password = document.getElementById("new_password").value;
       const res = await fetch("/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,14 +423,74 @@
       const data = await res.json();
       if (res.ok) {
         alert("Password reset! Please login.");
-        showLogin();
+        document.getElementById("setPasswordModal").classList.add("hidden");
+        landing.classList.remove("hidden");
       } else {
         alert(data.error || "Reset failed");
       }
     };
 
-    // Default to login form
-    if (!token) showLogin();
+    // Edit field modal
+    const editFieldModal = document.getElementById("editFieldModal");
+    const editFieldTitle = document.getElementById("editFieldTitle");
+    const editFieldInput = document.getElementById("editFieldInput");
+    const cancelEditFieldBtn = document.getElementById("cancelEditFieldBtn");
+    const saveEditFieldBtn = document.getElementById("saveEditFieldBtn");
+
+    // Open edit field modal
+    function openEditFieldModal(field, value) {
+      editFieldTitle.textContent = "Edit " + field.charAt(0).toUpperCase() + field.slice(1);
+      editFieldInput.value = value;
+      editFieldModal.classList.remove("hidden");
+    }
+
+    // Close edit field modal
+    cancelEditFieldBtn.onclick = () => {
+      editFieldModal.classList.add("hidden");
+    };
+
+    // Save edited field
+    saveEditFieldBtn.onclick = async () => {
+      const field = editFieldTitle.textContent.split(" ")[1].toLowerCase();
+      const newValue = editFieldInput.value;
+      if (!newValue) return;
+      try {
+        const res = await fetch("/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + authToken
+          },
+          body: JSON.stringify({ [field]: newValue })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(field.charAt(0).toUpperCase() + field.slice(1) + " updated!");
+          editFieldModal.classList.add("hidden");
+          currentUser[field] = newValue;
+          document.getElementById("profile_" + field + "_display").textContent = newValue;
+        } else {
+          alert(data.error || field.charAt(0).toUpperCase() + field.slice(1) + " update failed");
+        }
+      } catch (err) {
+        alert(field.charAt(0).toUpperCase() + field.slice(1) + " update error");
+      }
+    };
+
+    // Edit name
+    document.getElementById("editNameBtn").onclick = () => {
+      openEditFieldModal("name", currentUser.name);
+    };
+
+    // Edit email
+    document.getElementById("editEmailBtn").onclick = () => {
+      openEditFieldModal("email", currentUser.email);
+    };
+
+    // Edit bio
+    document.getElementById("editBioBtn").onclick = () => {
+      openEditFieldModal("bio", currentUser.bio || "");
+    };
   </script>
 </body>
 </html>
