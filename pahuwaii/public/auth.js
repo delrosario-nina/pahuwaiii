@@ -54,11 +54,12 @@
     showLoginBtn.classList.add('text-gray-600');
     signupForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
-    signupPrompt.classList.add('hidden'); // hide “Not a member” text
+    signupPrompt.classList.add('hidden'); 
   }
 
   // Event listeners
   showLoginBtn.addEventListener('click', activateLogin);
+  
   showSignupBtn.addEventListener('click', activateSignup);
   switchToSignup.addEventListener('click', (e) => {
     e.preventDefault();
@@ -84,6 +85,7 @@
         authToken = data.token;
         localStorage.setItem("authToken", authToken);
         currentUser = data;
+        document.getElementById("loginForm").reset();
         showProfile();
       } else {
         alert(data.error || "Login failed");
@@ -102,7 +104,7 @@
         alert("Passwords do not match");
         return;
       }
-      
+
       const res = await fetch("/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +113,7 @@
       const data = await res.json();
       if (res.ok) {
         alert("Registered! Please login.");
+        document.getElementById("signupForm").reset();
         showLogin();
       } else {
         alert(data.error || "Registration failed");
