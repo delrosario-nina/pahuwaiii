@@ -73,6 +73,7 @@
       e.preventDefault();
       const name = document.getElementById("login_name").value;
       const password = document.getElementById("login_password").value;
+
       const res = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -95,6 +96,13 @@
       const name = document.getElementById("signup_name").value;
       const email = document.getElementById("signup_email").value;
       const password = document.getElementById("signup_password").value;
+            const confirm_password = document.getElementById("signup_confirm_password").value;
+
+      if (password !== confirm_password) {
+        alert("Passwords do not match");
+        return;
+      }
+      
       const res = await fetch("/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
