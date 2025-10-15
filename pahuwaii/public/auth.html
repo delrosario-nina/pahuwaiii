@@ -25,11 +25,11 @@
     <!-- Toggle Buttons -->
     <div class="flex bg-gray-200 rounded-full p-1 w-full">
       <button id="showLoginBtn"
-        class="w-1/2 py-2 rounded-full text-sm font-semibold bg-white shadow text-gray-900 transition-all duration-300">
+        class="w-1/2 py-2 rounded-full text-sm font-semibold text-gray-600 hover:text-[#7c69bd] transition-all duration-300">
         Login
       </button>
       <button id="showSignupBtn"
-        class="w-1/2 py-2 rounded-full text-sm font-semibold text-gray-600 hover:text-gray-800 transition-all duration-300">
+        class="w-1/2 py-2 rounded-full text-sm font-semibold text-gray-600 hover:text-[#29810E] transition-all duration-300">
         Signup
       </button>
     </div>
@@ -39,7 +39,7 @@
       <input type="text" id="login_name" placeholder="Name" required class="border p-2 rounded">
       <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
       <a href="#" id="forgotPasswordLink" class="text-gray-600 text-sm self-start hover:underline">Forgot Password?</a>
-      <button type="submit" class="bg-[#29810E] text-white px-4 py-2 rounded hover:bg-[#174908] transition">
+      <button type="submit" class="bg-[#7c69bd] text-white px-4 py-2 rounded hover:bg-[#5a5371] transition">
         Login
       </button>
 
@@ -96,18 +96,19 @@
 
     <!-- Profile Info Section -->
     <div class="flex flex-col items-center flex-1 justify-center">
-      <h2 class="text-4xl font-bold mb-4">Profile :]</h2>
+      <h2 class="text-4xl font-bold mb-4"> <span id="profile_name_display_header"></span>'s Profile : ]</h2>
       <span class="material-icons-outlined text-[120px] mb-2 border-4 border-black rounded-full">account_circle</span>
 
       <div class="text-left w-full max-w-xs text-xl">
         <div class="flex items-center gap-2 mb-2">
-          <span id="profile_name_display" class="font-bold underline"></span>
+          <span class="font-bold">Name:</span>
+          <span id="profile_name_display" class="underline"></span>
           <span id="editNameBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Name">edit</span>
         </div>
 
         <div class="mb-2">
           <span class="font-bold">Email:</span>
-          <span id="profile_email_display"></span>
+          <span id="profile_email_display" class="underline"></span>
           <span id="editEmailBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Email">edit</span>
         </div>
 
@@ -118,10 +119,15 @@
         </div>
       </div>
 
-      <button id="saveProfileBtn"
+      <!-- <button id="saveProfileBtn"
         class="mt-4 px-6 py-2 bg-green-300 border-2 border-black rounded-xl text-lg font-semibold hover:bg-green-400 transition-all">
         Save Updated Profile
-      </button>
+      </button> -->
+
+      <div id="updateProfileToast"
+        class="hidden absolute z-50 bottom-10 bg-green-400 text-white px-4 py-2 rounded-lg shadow-lg">
+        ✅Profile updated✅
+      </div>
     </div>
 
     <!-- Settings Section -->
@@ -151,15 +157,18 @@
           <input type="checkbox" id="catModeToggle" class="w-5 h-5 accent-black">
           <span><span class="font-bold">Cat Mode</span></span>
         </label>
+        <div id="catToast"
+          class="hidden fixed z-50 bottom-20 right-1 -translate-x-[70%] bg-[#fffdd7] px-4 py-2 rounded-lg shadow-lg">
+                        /| _ ╱|、<br>             ( •̀ㅅ •́  )<br>        ＿ノ ヽ ノ＼＿ <br>    /　`/ ⌒Ｙ⌒ Ｙ　 \<br> ( 　(三ヽ人　 /　 　|<br>|　ﾉ⌒＼ ￣￣ヽ　 ノ<br>ヽ＿＿＿＞､＿＿／<br>          ｜( 王 ﾉ〈 <br>           /ﾐ`ー―彡\<br>
+        </div>
       </div>
     </div>
   </div>
   <button id="logoutBtn"
-      class="absolute top-6 right-6 px-6 py-2 bg-red-300 border-4 border-black rounded-xl text-xl font-bold hover:bg-red-400 transition-all">
+      class="absolute top-6 right-6 px-6 py-2 bg-red-300 border-4 border-black rounded-xl text-l font-bold hover:bg-red-400 transition-all">
       SIGN OUT
     </button>
 </div>
-
 
 
   <!-- Edit Field Modal -->
@@ -174,6 +183,22 @@
     </div>
   </div>
   
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+      <h2 class="text-lg font-semibold mb-4">Are you sure you want to delete your account?</h2>
+      <p class="text-sm text-gray-600 mb-6">This cannot be undone.</p>
+      <div class="flex justify-center space-x-3">
+        <button id="cancelDelete" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+          Cancel
+        </button>
+        <button id="confirmDelete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="auth.js"></script>
   
 </body>
