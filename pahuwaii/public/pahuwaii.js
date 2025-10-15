@@ -84,6 +84,9 @@ function renderColumn(containerId, tasks) {
         <div class="flex items-center gap-2">
           <input type="checkbox" id="cb_${task.id}" ${task.status === "done" ? "checked" : ""} />
           <span class="font-semibold text-lg kanban-title" id="task_name_${task.id}">
+          <span class="text-xs text-gray-500" id="task_date_${task.id}">
+            ${task.date_added ? new Date(task.date_added).toLocaleDateString() : "Unknown"}
+          </span>
             ${escapeHtml(task.name)}
           </span>
         </div>
