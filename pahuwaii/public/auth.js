@@ -1,44 +1,46 @@
+  const landing = document.getElementById("landing");
+  const authModal = document.getElementById("authModal");
+  const profileCard = document.getElementById("profileCard");
+  const loginForm = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupForm");
+  const showLoginBtn = document.getElementById("showLoginBtn");
+  const showSignupBtn = document.getElementById("showSignupBtn");
+  const signupPrompt = document.getElementById('signupPrompt');
+  const switchToSignup = document.getElementById('switchToSignup');
+  const closeAuthModal = document.getElementById("closeAuthModal");
 
-    const landing = document.getElementById("landing");
-    const authModal = document.getElementById("authModal");
-    const profileCard = document.getElementById("profileCard");
-    const loginForm = document.getElementById("loginForm");
-    const signupForm = document.getElementById("signupForm");
-    const showLoginBtn = document.getElementById("showLoginBtn");
-    const showSignupBtn = document.getElementById("showSignupBtn");
-    const signupPrompt = document.getElementById('signupPrompt');
-    const switchToSignup = document.getElementById('switchToSignup');
-    const closeAuthModal = document.getElementById("closeAuthModal");
+  let authToken = localStorage.getItem("authToken") || null;
+  let currentUser = null;
 
-    let authToken = localStorage.getItem("authToken") || null;
-    let currentUser = null;
+  // pahuwaii hompage --> login when button is clicked
+  document.getElementById("getStartedBtn").onclick = () => {
+    authModal.classList.remove("hidden");
+    landing.classList.add("hidden");
+    showLogin();
+  };
 
-    // Show modal
-    document.getElementById("getStartedBtn").onclick = () => {
-      authModal.classList.remove("hidden");
-      landing.classList.add("hidden");
-      showLogin();
-    };
+  //login --> pahuwaii homepage when cancel button is clicked
+  closeAuthModal.onclick = () => {
+    authModal.classList.add("hidden");
+    landing.classList.remove("hidden");
+  };
 
-    closeAuthModal.onclick = () => {
-      authModal.classList.add("hidden");
-      landing.classList.remove("hidden");
-    };
+  showLoginBtn.onclick = showLogin;
+  showSignupBtn.onclick = showSignup;
 
-    showLoginBtn.onclick = showLogin;
-    showSignupBtn.onclick = showSignup;
+  //showing by removing hidden
+  function showLogin() {
+    loginForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
+  }
 
-    function showLogin() {
-      loginForm.classList.remove("hidden");
-      signupForm.classList.add("hidden");
-    }
-    function showSignup() {
-      loginForm.classList.add("hidden");
-      signupForm.classList.remove("hidden");
-    }
+  //showing by removing hidden
+  function showSignup() {
+    loginForm.classList.add("hidden");
+    signupForm.classList.remove("hidden");
+  }
 
-    
-  // --- Toggle buttons ---
+  //toggle buttons
   function activateLogin() {
     showLoginBtn.classList.add('bg-white', 'shadow', 'text-gray-900');
     showSignupBtn.classList.remove('bg-white', 'shadow', 'text-gray-900');
@@ -150,30 +152,6 @@
       if (newBio !== null) currentUser.bio = newBio;
       document.getElementById("profile_bio_display").textContent = currentUser.bio;
     };
-
-    // // Save profile
-    // document.getElementById("saveProfileBtn").onclick = async () => {
-    //   try {
-    //     const res = await fetch("/profile", {
-    //       method: "PATCH",
-    //       headers: {
-    //         "Content-Type": "application/json",
-    //         Authorization: "Bearer " + authToken
-    //       },
-    //       body: JSON.stringify({ name: currentUser.name, email: currentUser.email, bio: currentUser.bio })
-    //     });
-    //     const data = await res.json();
-    //     if (res.ok) {
-    //       const updateProfileToast = document.getElementById("updateProfileToast");
-    //       updateProfileToast.classList.remove("hidden");
-    //       setTimeout(() => updateProfileToast.classList.add("hidden"), 2000);
-    //     } else {
-    //       alert(data.error || "Profile update failed");
-    //     }
-    //   } catch (err) {
-    //     alert("Profile update error");
-    //   }
-    // };
 
     // Change password
     document.getElementById("changePasswordBtn").onclick = async () => {
