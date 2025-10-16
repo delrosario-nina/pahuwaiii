@@ -6,10 +6,9 @@ const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const JWT_SECRET = "supersecret";
-const nodemailer = require("nodemailer"); //
-
+const jwt = require("jsonwebtoken"); //securely transmitting information between parties as a JSON object
+const JWT_SECRET = "supersecret"; //
+const nodemailer = require("nodemailer"); //send emails from a server-side application
 
 
 const app = express();
@@ -133,16 +132,20 @@ app.post("/debug", (req, res) => {
   res.json({ received: req.body });
 });
 
+
+
 //
 //No need to anything before this code nina >:(
 //
 
-//for signup (error checking bcoz its a bitch)
+
+
+
+//For signup (error checking bcoz its a bitch)
 app.post("/signup", (req, res) => {
   const { name, email, password } = req.body;
   console.log("Signup request:", req.body);
 
-  //no missing fields
   if (!name || !email || !password) {
     console.log("Missing fields");
     return res.status(400).json({ error: "Missing fields" });
@@ -153,17 +156,14 @@ app.post("/signup", (req, res) => {
       console.error("DB error:", err);
       return res.status(500).json({ error: err.message });
     }
-    //must have unique email
     if (user) {
       console.log("Email already exists:", email);
       return res.status(409).json({ error: "Email already in use" });
     }
 
-    //hash the password
     const hashed = await bcrypt.hash(password, 10);
     console.log("Hashed password:", hashed);
 
-    //insert into table
     db.run(
       "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
       [name, email, hashed],
@@ -179,11 +179,12 @@ app.post("/signup", (req, res) => {
   });
 });
 
-// for login
+
+
+// For login
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
 
-  // check for missing fields
   if (!name || !password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
@@ -194,18 +195,18 @@ app.post("/login", (req, res) => {
       return res.status(500).json({ error: "Server error, please try again later" });
     }
 
-    // if no user found with the given name
+    // If no user found with the given name
     if (!user) {
       return res.status(404).json({ error: "No such account found" });
     }
 
-    // compare password with hashed password
+    // Compare password with hashed password
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // what is a jwt token
+    // if everything is correct, issue a JWT token
     const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
     res.json({
       message: "Login successful",
@@ -217,7 +218,7 @@ app.post("/login", (req, res) => {
 });
 
 
-//getting data to display for the profile
+//Getting data to display for the profile
 app.get("/profile", (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
@@ -236,14 +237,13 @@ app.get("/profile", (req, res) => {
 });
 
 
-// editing the profile
+// Editing the profile
 app.patch("/profile", (req, res) => {
   console.log("Incoming body:", req.body);
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
   const token = authHeader.split(" ")[1];
   let userId;
-  //jwt
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     userId = decoded.user_id;
@@ -254,7 +254,6 @@ app.patch("/profile", (req, res) => {
   const { name, email, bio } = req.body;
   console.log("Incoming body:", req.body);
 
-  //what does this do?
   let fields = [];
   let values = [];
   if (name !== undefined) { fields.push("name = ?"); values.push(name); }
@@ -275,13 +274,11 @@ app.patch("/profile", (req, res) => {
   );
 });
 
-//updating the password
 app.patch("/profile/password", (req, res) => {
   console.log("Incoming body:", req.body);
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
 
-  //what
   const token = authHeader.split(" ")[1];
   let userId;
   try {
@@ -293,14 +290,13 @@ app.patch("/profile/password", (req, res) => {
 
   const { oldPassword, newPassword } = req.body;
 
-  //throw error if passwords not the same
+
   if (!oldPassword || !newPassword)
     return res.status(400).json({ error: "Missing old or new password" });
 
   db.get("SELECT password FROM users WHERE id = ?", [userId], async (err, user) => {
     if (err || !user) return res.status(500).json({ error: "User not found" });
 
-    //check the old password and compare if it is the same as the input password for old password
     const match = await bcrypt.compare(oldPassword, user.password);
     if (!match) return res.status(401).json({ error: "Old password incorrect" });
 
@@ -312,34 +308,35 @@ app.patch("/profile/password", (req, res) => {
   });
 });
 
-//important pls study!!
 
-// request password reset
+
+// Request password reset
 app.post("/request-reset", (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Missing email" });
   db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
     if (err || !user) return res.status(404).json({ error: "User not found" });
-    //Node’s built-in crypto module to make a secure random 32-byte token and convert it to a hex string
     const token = require("crypto").randomBytes(32).toString("hex");
-    //the token will expire in 15 minutes
     const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
     db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
     
-    //nodemailer to send email through gmail
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "nedelrosario@up.edu.ph",
-        //store the app password in an .env file for security purposes
+        user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_APP_PASSWORD
       }
     });
     const mailOptions = {
-      from: "nedelrosario@up.edu.ph",
+      from: "ninacloudia29@gmail.com",
       to: email,
-      subject: "Pahuwaii :3 Password Reset",
-      text: `Click this link to reset your password teehee: http://localhost:3000/auth.html?token=${token}`
+      subject: "Pahuwaii Password Reset",
+      text: `Click this link to reset your password: http://localhost:3000/auth.html?token=${token}
+             This link is valid for 15 minutes and can only be used once.
+             Please don't share this code with anyone: we'll never ask for it on the phone or via email.
+             
+             Thanks,
+             The Pahuwaii :3 Team`
     };
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
@@ -351,16 +348,13 @@ app.post("/request-reset", (req, res) => {
   });
 });
 
-// reset password
+// Reset password
 app.post("/reset-password", async (req, res) => {
   const { token, new_password } = req.body;
-  //receives the token from the auth.js and compares it the token in the db
   if (!token || !new_password) return res.status(400).json({ error: "Missing fields" });
   db.get("SELECT * FROM users WHERE reset_token = ?", [token], async (err, user) => {
-    //error handling when token expires
     if (err || !user || user.reset_token_expiry < Date.now())
       return res.status(400).json({ error: "Invalid or expired token" });
-
     const hashed = await bcrypt.hash(new_password, 10);
     db.run("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?", [hashed, user.id]);
     res.json({ success: true });
@@ -376,9 +370,7 @@ app.delete("/delete-account", (req, res) => {
   let userId;
 
   try {
-    //if valid, returns a decoded object containing user data
     const decoded = jwt.verify(token, JWT_SECRET);
-    //extracts the user_id for deletion
     userId = decoded.user_id;
   } catch (err) {
     console.error("Invalid token:", err.message);
@@ -398,7 +390,6 @@ app.delete("/delete-account", (req, res) => {
     res.json({ success: true, deleted: this.changes });
   });
 });
-
 
 // serve static frontend from "public" folder   PUTANGINA NITONG LINE NA TO ANG LAKI LAKI NG PROBLEMA KO ITO LANG PALA MAY SALA
 app.use(express.static(path.join(__dirname, "public")));

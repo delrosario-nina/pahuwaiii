@@ -506,6 +506,8 @@
     document.addEventListener("DOMContentLoaded", () => {
       const darkToggle = document.getElementById("darkModeToggle");
       const catToggle = document.getElementById("catModeToggle");
+      let catMode = localStorage.getItem("catMode") === "true";
+
 
       if (!darkToggle || !catToggle) return; // safety check
 
@@ -515,19 +517,27 @@
       //   localStorage.setItem("darkMode", darkToggle.checked);
       // });
 
+      if (catMode) {
+        document.body.classList.add("cat-mode");
+      }
+
       // Cat Mode toggle
-      catToggle.addEventListener("change", () => {
-        if (catToggle.checked) {
+      catToggle.addEventListener("click", () => {
+        catMode = !catMode; // toggle manually
+
+        if (catMode) {
           document.body.classList.add("cat-mode");
           const meow = new Audio("https://www.myinstants.com/media/sounds/gary_meow.mp3");
           meow.play();
+
           const catToast = document.getElementById("catToast");
           catToast.classList.remove("hidden");
           setTimeout(() => catToast.classList.add("hidden"), 2000);
         } else {
           document.body.classList.remove("cat-mode");
         }
-        localStorage.setItem("catMode", catToggle.checked);
+
+        localStorage.setItem("catMode", catMode);
       });
 
       // Load saved settings on page load
@@ -535,10 +545,6 @@
       //   darkToggle.checked = true;
       //   document.documentElement.classList.add("dark");
       // }
-      if (localStorage.getItem("catMode") === "true") {
-        catToggle.checked = true;
-        document.body.classList.add("cat-mode");
-      }
     });
 
 
