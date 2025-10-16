@@ -133,20 +133,16 @@ app.post("/debug", (req, res) => {
   res.json({ received: req.body });
 });
 
-
-
 //
 //No need to anything before this code nina >:(
 //
 
-
-
-
-//For signup (error checking bcoz its a bitch)
+//for signup (error checking bcoz its a bitch)
 app.post("/signup", (req, res) => {
   const { name, email, password } = req.body;
   console.log("Signup request:", req.body);
 
+  //no missing fields
   if (!name || !email || !password) {
     console.log("Missing fields");
     return res.status(400).json({ error: "Missing fields" });
@@ -157,14 +153,17 @@ app.post("/signup", (req, res) => {
       console.error("DB error:", err);
       return res.status(500).json({ error: err.message });
     }
+    //must have unique email
     if (user) {
       console.log("Email already exists:", email);
       return res.status(409).json({ error: "Email already in use" });
     }
 
+    //hash the password
     const hashed = await bcrypt.hash(password, 10);
     console.log("Hashed password:", hashed);
 
+    //insert into table
     db.run(
       "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
       [name, email, hashed],
@@ -180,12 +179,11 @@ app.post("/signup", (req, res) => {
   });
 });
 
-
-
-// For login
+// for login
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
 
+  // check for missing fields
   if (!name || !password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
@@ -196,18 +194,18 @@ app.post("/login", (req, res) => {
       return res.status(500).json({ error: "Server error, please try again later" });
     }
 
-    // If no user found with the given name
+    // if no user found with the given name
     if (!user) {
       return res.status(404).json({ error: "No such account found" });
     }
 
-    // Compare password with hashed password
+    // compare password with hashed password
     const match = await bcrypt.compare(password, user.password);
     if (!match) {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    // If everything is correct, issue a JWT token
+    // what is a jwt token
     const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
     res.json({
       message: "Login successful",
@@ -219,7 +217,7 @@ app.post("/login", (req, res) => {
 });
 
 
-//Getting data to display for the profile
+//getting data to display for the profile
 app.get("/profile", (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
@@ -238,13 +236,14 @@ app.get("/profile", (req, res) => {
 });
 
 
-// Editing the profile
+// editing the profile
 app.patch("/profile", (req, res) => {
   console.log("Incoming body:", req.body);
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
   const token = authHeader.split(" ")[1];
   let userId;
+  //jwt
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     userId = decoded.user_id;
@@ -255,6 +254,7 @@ app.patch("/profile", (req, res) => {
   const { name, email, bio } = req.body;
   console.log("Incoming body:", req.body);
 
+  //what does this do?
   let fields = [];
   let values = [];
   if (name !== undefined) { fields.push("name = ?"); values.push(name); }
@@ -275,11 +275,13 @@ app.patch("/profile", (req, res) => {
   );
 });
 
+//updating the password
 app.patch("/profile/password", (req, res) => {
   console.log("Incoming body:", req.body);
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
 
+  //what
   const token = authHeader.split(" ")[1];
   let userId;
   try {
@@ -291,13 +293,14 @@ app.patch("/profile/password", (req, res) => {
 
   const { oldPassword, newPassword } = req.body;
 
-
+  //throw error if passwords not the same
   if (!oldPassword || !newPassword)
     return res.status(400).json({ error: "Missing old or new password" });
 
   db.get("SELECT password FROM users WHERE id = ?", [userId], async (err, user) => {
     if (err || !user) return res.status(500).json({ error: "User not found" });
 
+    //check the old password and compare if it is the same as the input password for old password
     const match = await bcrypt.compare(oldPassword, user.password);
     if (!match) return res.status(401).json({ error: "Old password incorrect" });
 
@@ -309,30 +312,34 @@ app.patch("/profile/password", (req, res) => {
   });
 });
 
+//important pls study!!
 
-
-// Request password reset
+// request password reset
 app.post("/request-reset", (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Missing email" });
   db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
     if (err || !user) return res.status(404).json({ error: "User not found" });
+    //Node’s built-in crypto module to make a secure random 32-byte token and convert it to a hex string
     const token = require("crypto").randomBytes(32).toString("hex");
+    //the token will expire in 15 minutes
     const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
     db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
     
+    //nodemailer to send email through gmail
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: "nedelrosario@up.edu.ph",
+        //store the app password in an .env file for security purposes
         pass: process.env.EMAIL_APP_PASSWORD
       }
     });
     const mailOptions = {
       from: "nedelrosario@up.edu.ph",
       to: email,
-      subject: "Pahuwaii Password Reset",
-      text: `Click this link to reset your password: http://localhost:3000/auth.html?token=${token}`
+      subject: "Pahuwaii :3 Password Reset",
+      text: `Click this link to reset your password teehee: http://localhost:3000/auth.html?token=${token}`
     };
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
@@ -344,13 +351,16 @@ app.post("/request-reset", (req, res) => {
   });
 });
 
-// Reset password
+// reset password
 app.post("/reset-password", async (req, res) => {
   const { token, new_password } = req.body;
+  //receives the token from the auth.js and compares it the token in the db
   if (!token || !new_password) return res.status(400).json({ error: "Missing fields" });
   db.get("SELECT * FROM users WHERE reset_token = ?", [token], async (err, user) => {
+    //error handling when token expires
     if (err || !user || user.reset_token_expiry < Date.now())
       return res.status(400).json({ error: "Invalid or expired token" });
+
     const hashed = await bcrypt.hash(new_password, 10);
     db.run("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?", [hashed, user.id]);
     res.json({ success: true });
@@ -366,7 +376,9 @@ app.delete("/delete-account", (req, res) => {
   let userId;
 
   try {
+    //if valid, returns a decoded object containing user data
     const decoded = jwt.verify(token, JWT_SECRET);
+    //extracts the user_id for deletion
     userId = decoded.user_id;
   } catch (err) {
     console.error("Invalid token:", err.message);
