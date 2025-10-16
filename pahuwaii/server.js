@@ -1,3 +1,5 @@
+require('dotenv').config(); //to use env variables for the nodemailer
+
 //imports
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
@@ -14,8 +16,6 @@ const app = express();
 app.use(cors());              //cors is needed for local testing with live server extension 
 app.use(express.json());      // for parsing application/json
 
-// serve static frontend from "public" folder
-app.use(express.static(path.join(__dirname, "public")));
 
 //create a database
 const db = new sqlite3.Database("todo.db", (err) => {
@@ -34,6 +34,7 @@ db.serialize(() => {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
+      bio TEXT NOT NULL DEFAULT 'insert bio here',
       reset_token TEXT,
       reset_token_expiry INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
@@ -184,18 +185,37 @@ app.post("/signup", (req, res) => {
 // For login
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
-  db.get(
-    "SELECT * FROM users WHERE name = ?",
-    [name],
-    async (err, user) => {
-      if (err || !user) return res.status(401).json({ error: "Invalid credentials" });
-      const match = await bcrypt.compare(password, user.password);
-      if (!match) return res.status(401).json({ error: "Invalid credentials" });
-      // Issue JWT
-      const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
-      res.json({ token, name: user.name, email: user.email });
+
+  if (!name || !password) {
+    return res.status(400).json({ error: "Please fill in all fields" });
+  }
+
+  db.get("SELECT * FROM users WHERE name = ?", [name], async (err, user) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Server error, please try again later" });
     }
-  );
+
+    // If no user found with the given name
+    if (!user) {
+      return res.status(404).json({ error: "No such account found" });
+    }
+
+    // Compare password with hashed password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
+    // If everything is correct, issue a JWT token
+    const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+    res.json({
+      message: "Login successful",
+      token,
+      name: user.name,
+      email: user.email
+    });
+  });
 });
 
 
@@ -220,6 +240,7 @@ app.get("/profile", (req, res) => {
 
 // Editing the profile
 app.patch("/profile", (req, res) => {
+  console.log("Incoming body:", req.body);
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: "Missing token" });
   const token = authHeader.split(" ")[1];
@@ -231,28 +252,18 @@ app.patch("/profile", (req, res) => {
     return res.status(401).json({ error: "Invalid token" });
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, bio } = req.body;
+  console.log("Incoming body:", req.body);
+
   let fields = [];
   let values = [];
-  if (name) { fields.push("name = ?"); values.push(name); }
-  if (email) { fields.push("email = ?"); values.push(email); }
-  if (password) {
-    bcrypt.hash(password, 10, (err, hashed) => {
-      if (err) return res.status(500).json({ error: err.message });
-      fields.push("password = ?"); values.push(hashed);
-      values.push(userId);
-      db.run(
-        `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
-        values,
-        function (err) {
-          if (err) return res.status(500).json({ error: err.message });
-          res.json({ updated: this.changes });
-        }
-      );
-    });
-    return;
-  }
+  if (name !== undefined) { fields.push("name = ?"); values.push(name); }
+  if (email !== undefined) { fields.push("email = ?"); values.push(email); }
+  if (bio !== undefined) { fields.push("bio = ?"); values.push(bio); }
+
+
   if (!fields.length) return res.status(400).json({ error: "No fields to update" });
+  
   values.push(userId);
   db.run(
     `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
@@ -264,6 +275,41 @@ app.patch("/profile", (req, res) => {
   );
 });
 
+app.patch("/profile/password", (req, res) => {
+  console.log("Incoming body:", req.body);
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+  const token = authHeader.split(" ")[1];
+  let userId;
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    userId = decoded.user_id;
+  } catch {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  const { oldPassword, newPassword } = req.body;
+
+
+  if (!oldPassword || !newPassword)
+    return res.status(400).json({ error: "Missing old or new password" });
+
+  db.get("SELECT password FROM users WHERE id = ?", [userId], async (err, user) => {
+    if (err || !user) return res.status(500).json({ error: "User not found" });
+
+    const match = await bcrypt.compare(oldPassword, user.password);
+    if (!match) return res.status(401).json({ error: "Old password incorrect" });
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    db.run("UPDATE users SET password = ? WHERE id = ?", [hashed, userId], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ message: "Password updated successfully" });
+    });
+  });
+});
+
+
 
 // Request password reset
 app.post("/request-reset", (req, res) => {
@@ -274,7 +320,7 @@ app.post("/request-reset", (req, res) => {
     const token = require("crypto").randomBytes(32).toString("hex");
     const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
     db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
-    // Send email with token link
+    
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -310,6 +356,40 @@ app.post("/reset-password", async (req, res) => {
     res.json({ success: true });
   });
 });
+
+
+app.delete("/delete-account", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+
+  const token = authHeader.split(" ")[1];
+  let userId;
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    userId = decoded.user_id;
+  } catch (err) {
+    console.error("Invalid token:", err.message);
+    return res.status(401).json({ error: "Invalid token" });
+  }
+
+  console.log("Deleting user ID:", userId);
+
+  db.run("DELETE FROM users WHERE id = ?", [userId], function (err) {
+    if (err) {
+      console.error("DB error:", err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
+});
+
+
+// serve static frontend from "public" folder   PUTANGINA NITONG LINE NA TO ANG LAKI LAKI NG PROBLEMA KO ITO LANG PALA MAY SALA
+app.use(express.static(path.join(__dirname, "public")));
 
 // fallback to serve index.html for any other route to ensure it stays a single page
 // Start server on PORT env or 3000 by default

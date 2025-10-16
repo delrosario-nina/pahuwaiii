@@ -138,11 +138,13 @@
       if (newName) currentUser.name = newName;
       document.getElementById("profile_name_display").textContent = currentUser.name;
     };
+
     document.getElementById("editEmailBtn").onclick = () => {
       const newEmail = prompt("Enter new email:", currentUser.email);
       if (newEmail) currentUser.email = newEmail;
       document.getElementById("profile_email_display").textContent = currentUser.email;
     };
+
     document.getElementById("editBioBtn").onclick = () => {
       const newBio = prompt("Enter new bio:", currentUser.bio || "");
       if (newBio !== null) currentUser.bio = newBio;
@@ -178,7 +180,7 @@
       const newPassword = prompt("Enter new password:");
       if (!newPassword) return;
       try {
-        const res = await fetch("/profile", {
+        const res = await fetch("/profile/password", {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -200,27 +202,44 @@
     };
 
     // Delete account
-    document.getElementById("deleteAccountBtn").onclick = async () => {
-      if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
-      try {
-        const res = await fetch("/profile", {
-          method: "DELETE",
-          headers: {
-            Authorization: "Bearer " + authToken
-          }
-        });
-        if (res.ok) {
-          alert("Account deleted.");
-          localStorage.removeItem("authToken");
-          window.location.reload();
-        } else {
-          const data = await res.json();
-          alert(data.error || "Delete failed");
+    // Delete Account Modal (Fixed)
+  const deleteBtn = document.getElementById("deleteAccountBtn");
+  const modal = document.getElementById("deleteModal");
+  const cancelBtn = document.getElementById("cancelDelete");
+  const confirmBtn = document.getElementById("confirmDelete");
+
+  deleteBtn.onclick = () => modal.classList.remove("hidden");
+  cancelBtn.onclick = () => modal.classList.add("hidden");
+
+  confirmBtn.onclick = async () => {
+    modal.classList.add("hidden");
+    if (!authToken) {
+      alert("You must be logged in to delete your account.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/delete-account", {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + authToken
         }
-      } catch (err) {
-        alert("Delete error");
+      });
+
+      if (res.ok) {
+        alert("Account deleted.");
+        localStorage.removeItem("authToken");
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Delete failed");
       }
-    };
+    } catch (err) {
+      console.error(err);
+      alert("Delete error. Please try again.");
+    }
+  };
+
 
     // Logout
     document.getElementById("logoutBtn").onclick = () => {
@@ -282,6 +301,7 @@
       if (res.ok) {
         alert("Check your email for a reset link. (In dev, check server console for the link.)");
         document.getElementById("resetModal").classList.add("hidden");
+        document.getElementById("resetRequestForm").reset();
         authModal.classList.remove("hidden");
       } else {
         alert(data.error || "Reset request failed");
@@ -503,21 +523,6 @@
       // Set initial state (Login active by default)
       setActive(true);
     });
-
-    // Delete Account Modal
-    const deleteBtn = document.getElementById("deleteAccountBtn");
-    const modal = document.getElementById("deleteModal");
-    const cancelBtn = document.getElementById("cancelDelete");
-    const confirmBtn = document.getElementById("confirmDelete");
-
-    deleteBtn.onclick = () => modal.classList.remove("hidden");
-    cancelBtn.onclick = () => modal.classList.add("hidden");
-
-    confirmBtn.onclick = () => {
-      modal.classList.add("hidden");
-      // 🔥 Add delete logic here (e.g. API call or form submission)
-      alert("Account deleted."); // replace with real delete action
-    };
 
     // Accessbility Settings
     document.addEventListener("DOMContentLoaded", () => {
