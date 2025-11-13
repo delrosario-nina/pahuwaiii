@@ -1,44 +1,46 @@
+  const landing = document.getElementById("landing");
+  const authModal = document.getElementById("authModal");
+  const profileCard = document.getElementById("profileCard");
+  const loginForm = document.getElementById("loginForm");
+  const signupForm = document.getElementById("signupForm");
+  const showLoginBtn = document.getElementById("showLoginBtn");
+  const showSignupBtn = document.getElementById("showSignupBtn");
+  const signupPrompt = document.getElementById('signupPrompt');
+  const switchToSignup = document.getElementById('switchToSignup');
+  const closeAuthModal = document.getElementById("closeAuthModal");
 
-    const landing = document.getElementById("landing");
-    const authModal = document.getElementById("authModal");
-    const profileCard = document.getElementById("profileCard");
-    const loginForm = document.getElementById("loginForm");
-    const signupForm = document.getElementById("signupForm");
-    const showLoginBtn = document.getElementById("showLoginBtn");
-    const showSignupBtn = document.getElementById("showSignupBtn");
-    const signupPrompt = document.getElementById('signupPrompt');
-    const switchToSignup = document.getElementById('switchToSignup');
-    const closeAuthModal = document.getElementById("closeAuthModal");
+  let authToken = localStorage.getItem("authToken") || null;
+  let currentUser = null;
 
-    let authToken = localStorage.getItem("authToken") || null;
-    let currentUser = null;
+  // pahuwaii hompage --> login when button is clicked
+  document.getElementById("getStartedBtn").onclick = () => {
+    authModal.classList.remove("hidden");
+    landing.classList.add("hidden");
+    showLogin();
+  };
 
-    // Show modal
-    document.getElementById("getStartedBtn").onclick = () => {
-      authModal.classList.remove("hidden");
-      landing.classList.add("hidden");
-      showLogin();
-    };
+  //login --> pahuwaii homepage when cancel button is clicked
+  closeAuthModal.onclick = () => {
+    authModal.classList.add("hidden");
+    landing.classList.remove("hidden");
+  };
 
-    closeAuthModal.onclick = () => {
-      authModal.classList.add("hidden");
-      landing.classList.remove("hidden");
-    };
+  showLoginBtn.onclick = showLogin;
+  showSignupBtn.onclick = showSignup;
 
-    showLoginBtn.onclick = showLogin;
-    showSignupBtn.onclick = showSignup;
+  //showing by removing hidden
+  function showLogin() {
+    loginForm.classList.remove("hidden");
+    signupForm.classList.add("hidden");
+  }
 
-    function showLogin() {
-      loginForm.classList.remove("hidden");
-      signupForm.classList.add("hidden");
-    }
-    function showSignup() {
-      loginForm.classList.add("hidden");
-      signupForm.classList.remove("hidden");
-    }
+  //showing by removing hidden
+  function showSignup() {
+    loginForm.classList.add("hidden");
+    signupForm.classList.remove("hidden");
+  }
 
-    
-  // --- Toggle buttons ---
+  //toggle buttons
   function activateLogin() {
     showLoginBtn.classList.add('bg-white', 'shadow', 'text-gray-900');
     showSignupBtn.classList.remove('bg-white', 'shadow', 'text-gray-900');
@@ -54,11 +56,12 @@
     showLoginBtn.classList.add('text-gray-600');
     signupForm.classList.remove('hidden');
     loginForm.classList.add('hidden');
-    signupPrompt.classList.add('hidden'); // hide “Not a member” text
+    signupPrompt.classList.add('hidden'); 
   }
 
   // Event listeners
   showLoginBtn.addEventListener('click', activateLogin);
+  
   showSignupBtn.addEventListener('click', activateSignup);
   switchToSignup.addEventListener('click', (e) => {
     e.preventDefault();
@@ -73,6 +76,7 @@
       e.preventDefault();
       const name = document.getElementById("login_name").value;
       const password = document.getElementById("login_password").value;
+
       const res = await fetch("/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,6 +87,7 @@
         authToken = data.token;
         localStorage.setItem("authToken", authToken);
         currentUser = data;
+        document.getElementById("loginForm").reset();
         showProfile();
       } else {
         alert(data.error || "Login failed");
@@ -95,6 +100,13 @@
       const name = document.getElementById("signup_name").value;
       const email = document.getElementById("signup_email").value;
       const password = document.getElementById("signup_password").value;
+            const confirm_password = document.getElementById("signup_confirm_password").value;
+
+      if (password !== confirm_password) {
+        alert("Passwords do not match");
+        return;
+      }
+
       const res = await fetch("/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -103,6 +115,7 @@
       const data = await res.json();
       if (res.ok) {
         alert("Registered! Please login.");
+        document.getElementById("signupForm").reset();
         showLogin();
       } else {
         alert(data.error || "Registration failed");
@@ -114,6 +127,7 @@
       authModal.classList.add("hidden");
       landing.classList.add("hidden");
       profileCard.classList.remove("hidden");
+      document.getElementById("profile_name_display_header").textContent = currentUser.name || "";
       document.getElementById("profile_name_display").textContent = currentUser.name || "";
       document.getElementById("profile_email_display").textContent = currentUser.email || "";
       document.getElementById("profile_bio_display").textContent = currentUser.bio || "insert bio here";
@@ -126,37 +140,17 @@
       if (newName) currentUser.name = newName;
       document.getElementById("profile_name_display").textContent = currentUser.name;
     };
+
     document.getElementById("editEmailBtn").onclick = () => {
       const newEmail = prompt("Enter new email:", currentUser.email);
       if (newEmail) currentUser.email = newEmail;
       document.getElementById("profile_email_display").textContent = currentUser.email;
     };
+
     document.getElementById("editBioBtn").onclick = () => {
       const newBio = prompt("Enter new bio:", currentUser.bio || "");
       if (newBio !== null) currentUser.bio = newBio;
       document.getElementById("profile_bio_display").textContent = currentUser.bio;
-    };
-
-    // Save profile
-    document.getElementById("saveProfileBtn").onclick = async () => {
-      try {
-        const res = await fetch("/profile", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + authToken
-          },
-          body: JSON.stringify({ name: currentUser.name, email: currentUser.email, bio: currentUser.bio })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          alert("Profile updated!");
-        } else {
-          alert(data.error || "Profile update failed");
-        }
-      } catch (err) {
-        alert("Profile update error");
-      }
     };
 
     // Change password
@@ -164,7 +158,7 @@
       const newPassword = prompt("Enter new password:");
       if (!newPassword) return;
       try {
-        const res = await fetch("/profile", {
+        const res = await fetch("/profile/password", {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -174,7 +168,9 @@
         });
         const data = await res.json();
         if (res.ok) {
-          alert("Password updated!");
+          const updateProfileToast = document.getElementById("updateProfileToast");
+          updateProfileToast.classList.remove("hidden");
+          setTimeout(() => updateProfileToast.classList.add("hidden"), 1500);
         } else {
           alert(data.error || "Password update failed");
         }
@@ -184,27 +180,44 @@
     };
 
     // Delete account
-    document.getElementById("deleteAccountBtn").onclick = async () => {
-      if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
-      try {
-        const res = await fetch("/profile", {
-          method: "DELETE",
-          headers: {
-            Authorization: "Bearer " + authToken
-          }
-        });
-        if (res.ok) {
-          alert("Account deleted.");
-          localStorage.removeItem("authToken");
-          window.location.reload();
-        } else {
-          const data = await res.json();
-          alert(data.error || "Delete failed");
+    // Delete Account Modal (Fixed)
+  const deleteBtn = document.getElementById("deleteAccountBtn");
+  const modal = document.getElementById("deleteModal");
+  const cancelBtn = document.getElementById("cancelDelete");
+  const confirmBtn = document.getElementById("confirmDelete");
+
+  deleteBtn.onclick = () => modal.classList.remove("hidden");
+  cancelBtn.onclick = () => modal.classList.add("hidden");
+
+  confirmBtn.onclick = async () => {
+    modal.classList.add("hidden");
+    if (!authToken) {
+      alert("You must be logged in to delete your account.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/delete-account", {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + authToken
         }
-      } catch (err) {
-        alert("Delete error");
+      });
+
+      if (res.ok) {
+        alert("Account deleted.");
+        localStorage.removeItem("authToken");
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Delete failed");
       }
-    };
+    } catch (err) {
+      console.error(err);
+      alert("Delete error. Please try again.");
+    }
+  };
+
 
     // Logout
     document.getElementById("logoutBtn").onclick = () => {
@@ -266,6 +279,7 @@
       if (res.ok) {
         alert("Check your email for a reset link. (In dev, check server console for the link.)");
         document.getElementById("resetModal").classList.add("hidden");
+        document.getElementById("resetRequestForm").reset();
         authModal.classList.remove("hidden");
       } else {
         alert(data.error || "Reset request failed");
@@ -328,8 +342,61 @@
 
     // Save edited field
     saveEditFieldBtn.onclick = async () => {
+      const title = editFieldTitle.textContent;
+      const isPassword = title.toLowerCase().includes("password");
       const field = editFieldTitle.textContent.split(" ")[1].toLowerCase();
       const newValue = editFieldInput.value;
+        // Handle password change
+      if (isPassword) {
+        // re-query dynamic inputs
+        const oldPasswordEl = document.getElementById("oldPasswordInput");
+        const newPasswordEl = document.getElementById("newPasswordInput");
+        const oldPassword = oldPasswordEl?.value.trim();
+        const newPassword = newPasswordEl?.value.trim();
+
+        if (!oldPassword || !newPassword) {
+          alert("Please fill out both fields.");
+          return;
+        }
+        if (newPassword.length < 6) {
+          alert("New password must be at least 6 characters.");
+          return;
+        }
+        try {
+          const endpoints = ["/profile/password", "/profile"];
+          let res, data;
+          for (const ep of endpoints) {
+            res = await fetch(ep, {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + authToken
+              },
+              body: JSON.stringify({ oldPassword, newPassword })
+            });
+            data = await res.json().catch(() => ({}));
+            // if server indicates route not found or method not allowed, try next
+            if (res.status === 404 || res.status === 405) continue;
+            break;
+          }
+          if (res.ok) {
+            const updateProfileToast = document.getElementById("updateProfileToast");
+            updateProfileToast.classList.remove("hidden");
+            setTimeout(() => updateProfileToast.classList.add("hidden"), 1500);
+            editFieldModal.classList.add("hidden");
+            // clear inputs
+            oldPasswordEl.value = "";
+            newPasswordEl.value = "";
+          } else {
+            // show server message if present
+            alert(data.error || data.message || "Password update failed");
+          }
+        } catch (err) {
+          console.error("Password change error:", err);
+          alert("Password update error (see console).");
+        }
+        return;
+      }
       if (!newValue) return;
       try {
         const res = await fetch("/profile", {
@@ -342,10 +409,15 @@
         });
         const data = await res.json();
         if (res.ok) {
-          alert(field.charAt(0).toUpperCase() + field.slice(1) + " updated!");
+          const updateProfileToast = document.getElementById("updateProfileToast");
+          updateProfileToast.classList.remove("hidden");
+          setTimeout(() => updateProfileToast.classList.add("hidden"), 1500);
           editFieldModal.classList.add("hidden");
           currentUser[field] = newValue;
           document.getElementById("profile_" + field + "_display").textContent = newValue;
+          if (field === "name") {
+            document.getElementById("profile_name_display_header").textContent = newValue;
+          }
         } else {
           alert(data.error || field.charAt(0).toUpperCase() + field.slice(1) + " update failed");
         }
@@ -353,6 +425,30 @@
         alert(field.charAt(0).toUpperCase() + field.slice(1) + " update error");
       }
     };
+
+    // Change Password
+    document.getElementById("changePasswordBtn").onclick = () => {
+      editFieldTitle.textContent = "Change Password";
+      // replace input with two password fields
+      editFieldInput.outerHTML = `
+        <div id="passwordFields" class="flex flex-col gap-3">
+          <input type="password" id="oldPasswordInput" placeholder="Enter old password" class="border p-2 rounded">
+          <input type="password" id="newPasswordInput" placeholder="Enter new password" class="border p-2 rounded">
+        </div>
+      `;
+      // insert into modal body (replace the single input element)
+      const parent = editFieldInput.parentElement || editFieldModal.querySelector('.p-8') || editFieldModal;
+      // remove single input safely if exists
+      if (editFieldInput && editFieldInput.parentElement) editFieldInput.remove();
+      // append container (ensure not duplicated)
+      const existing = document.getElementById("passwordFields");
+      if (!existing) parent.insertAdjacentHTML("afterbegin", containerHtml);
+
+      editFieldModal.classList.remove("hidden");
+      // focus old password
+      setTimeout(() => document.getElementById("oldPasswordInput")?.focus(), 50);
+    };
+
 
     // Edit name
     document.getElementById("editNameBtn").onclick = () => {
@@ -368,3 +464,88 @@
     document.getElementById("editBioBtn").onclick = () => {
       openEditFieldModal("bio", currentUser.bio || "");
     };
+
+    // For Login-Signup toggle button colours
+    document.addEventListener("DOMContentLoaded", function () {
+      const loginBtn = document.getElementById("showLoginBtn");
+      const signupBtn = document.getElementById("showSignupBtn");
+
+      function setActive(isLoginActive) {
+        if (isLoginActive) {
+          loginBtn.classList.add("text-[#8c52ff]", "bg-white", "shadow");
+          loginBtn.classList.remove("text-gray-600");
+          signupBtn.classList.add("text-gray-600");
+          signupBtn.classList.remove("text-[#29810E]", "bg-white", "shadow");
+        } else {
+          signupBtn.classList.add("text-[#29810E]", "bg-white", "shadow");
+          signupBtn.classList.remove("text-gray-600");
+          loginBtn.classList.add("text-gray-600");
+          loginBtn.classList.remove("text-[#8c52ff]", "bg-white", "shadow");
+        }
+      }
+
+      loginBtn.addEventListener("click", function () {
+        setActive(true);
+        // Show login form, hide signup form if needed
+        document.getElementById("loginForm").classList.remove("hidden");
+        document.getElementById("signupForm").classList.add("hidden");
+      });
+
+      signupBtn.addEventListener("click", function () {
+        setActive(false);
+        // Show signup form, hide login form if needed
+        document.getElementById("signupForm").classList.remove("hidden");
+        document.getElementById("loginForm").classList.add("hidden");
+      });
+
+      // Set initial state (Login active by default)
+      setActive(true);
+    });
+
+    // Accessbility Settings
+    document.addEventListener("DOMContentLoaded", () => {
+      const darkToggle = document.getElementById("darkModeToggle");
+      const catToggle = document.getElementById("catModeToggle");
+      let catMode = localStorage.getItem("catMode") === "true";
+
+
+      if (!darkToggle || !catToggle) return; // safety check
+
+        // Dark Mode toggle
+      // darkToggle.addEventListener("change", () => {
+      //   document.documentElement.classList.toggle("dark", darkToggle.checked);
+      //   localStorage.setItem("darkMode", darkToggle.checked);
+      // });
+
+      if (catMode) {
+        document.body.classList.add("cat-mode");
+      }
+
+      // Cat Mode toggle
+      catToggle.addEventListener("click", () => {
+        catMode = !catMode; // toggle manually
+
+        if (catMode) {
+          document.body.classList.add("cat-mode");
+          const meow = new Audio("https://www.myinstants.com/media/sounds/gary_meow.mp3");
+          meow.play();
+
+          const catToast = document.getElementById("catToast");
+          catToast.classList.remove("hidden");
+          setTimeout(() => catToast.classList.add("hidden"), 2000);
+        } else {
+          document.body.classList.remove("cat-mode");
+        }
+
+        localStorage.setItem("catMode", catMode);
+      });
+
+      // Load saved settings on page load
+      // if (localStorage.getItem("darkMode") === "true") {
+      //   darkToggle.checked = true;
+      //   document.documentElement.classList.add("dark");
+      // }
+    });
+
+
+    
