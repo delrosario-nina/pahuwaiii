@@ -1,75 +1,73 @@
 # PAHUWAII :3
-
 For a student overwhelmed by numerous backlogs everyday, creating a to-do list may seem too stimulating and daunting. Pahuwaii aims to be a to-do list that is easy to the eyes and accommodating to students that are easily overstimulated. 
 
-## Tech Stack:
-a) **Frontend** - HTML, CSS (+tailwind), JavaScript
-b) **Backend** - Node.js + Express                          : javascript all throughout 
-c) **Database** - Sqlite                                    : easier learing curve and one file only
-
 > [!IMPORTANT]
-> How to run the web app:
+> How to run the web app:  
 > Run the node.js file (using the command node server.js) and then click the link provided (http://locahlhost:3000)
 
+## Tech Stack:
+a) **Frontend** - HTML, CSS (+Tailwind), JavaScript  
+b) **Backend** - Node.js + Express &emsp; : Javascript all throughout   
+c) **Database** - Sqlite &emsp; &emsp; &emsp; &emsp; &emsp; : easier learing curve and one file only    
+
 ## File Breakdown
-<!-- to fix: line breaks -->
-1) index.html - the skeleton of the code
-    What's inside?
+### 1. index.html - *The skeleton of the code*
+```
     Links to external resources:
-        TailwindCSS (for styling),
-        Google Fonts (for handwritten style hehe :3),
-        Material Symbols (for icons),
-        CSS (pahuwaii.css) and JS (pahuwaii.js).
+        TailwindCSS      (for styling)
+        Google Fonts     (for handwritten style hehe :3)
+        Material Symbols (for icons)
+        CSS              (pahuwaii.css)
+        JS               (pahuwaii.js)
     DOM elements:
-        Top bar (title + profile button).
-        Main kanban board with 3 columns (to do, in progress, done).
-        Progress bar that updates as tasks are completed.
-        Modals (popups) for adding, editing, deleting tasks.
-        Undo banner for restoring recently deleted tasks.
-
-2) pahuwaii.css - the design (not covered in tailwind)
-    What's inside?
-        Resetting default styles (removing margins, setting background, fonts).
-        Scroll handling: Kanban columns scroll vertically but hide the scrollbar.
-        Undo banner: Initially hidden, styled to appear at the bottom when active.
-        Dark mode styles: Overrides background colors, border colors, text colors, and input styles when the .dark-mode class is applied to body
-    
-3) pahuwaii.js - the functionality of the app
-    What's inside and what does it do?
-    State management: 
-        Keeps track of all tasks (allTasks), currently edited task, last deleted task (for undo).
+        Top bar (title + profile button)
+        Main kanban board with 3 columns (to do, in progress, done)
+        Progress bar that updates as tasks are completed
+        Modals (popups) for adding, editing, deleting tasks
+        Undo banner for restoring recently deleted tasks
+```
+### 2. pahuwaii.css - *The Design (not covered in Tailwind)*
+```
+        Resetting default styles (removing margins, setting background, fonts)
+        Scroll handling:  Kanban columns scroll vertically but hide the scrollbar
+        Undo banner:      Initially hidden, styled to appear at the bottom when active
+```
+### 3. pahuwaii.js - *The Functionality*
+```
+    State Management: 
+        Keeps track of all tasks (allTasks), currently edited task, last deleted task (for undo)
     Rendering:
-        Fetches tasks from the server (loadTasks()).
-        Sorts tasks (date, due date, priority).
-        Renders them into kanban columns (renderBoard() and renderColumn()).
-        Updates the progress bar.
-    Task operations:
-        Add (via POST request).
-        Edit (PATCH request).
-        Delete (DELETE request, with undo option).
-        Update fields inline (due date, status, priority).
-    UI interaction:
-        Open/close modals.
-        Toggle dark mode by clicking the title.
-        Show/hide undo banner.
-        Save sorting preference to localStorage.
-
-4) server.js - communicates with pahuwaii.js to access and manipulate the database
-    What's inside and what does it do?
+        Fetches tasks from the server (loadTasks())
+        Sorts tasks (date, due date, priority)
+        Renders them into kanban columns (renderBoard() and renderColumn())
+        Updates the progress bar
+    Task Operations:
+        Add (via POST request)
+        Edit (PATCH request)
+        Delete (DELETE request, with undo option)
+        Update fields inline (due date, status, priority)
+    UI Interaction:
+        Open/close modals
+        Show/hide undo banner
+        Save sorting preference to localStorage
+```
+### 4. server.js - *Access and Manipulation of Database (with pahuwaii.js)*
+```
     Database setup:
-        Uses sqlite3 to create a tasks table (if not exists).
-        Table has fields like id, name, due_date, due_time, priority, status, deleted_at.
+        Uses sqlite3 to create a tasks table (if it doesn't exist yet)
+        Table has fields like id, name, due_date, due_time, priority, status, deleted_at
     API endpoints:
-        GET /tasks → Returns all non-deleted tasks.
-        POST /tasks → Adds a new task.
-        PATCH /tasks/:id → Updates fields of a task.
-        DELETE /tasks/:id → Soft deletes a task (marks deleted_at timestamp).
-        POST /tasks/:id/undo → Restores a soft-deleted task.
+        GET /tasks → Returns all non-deleted tasks
+        POST /tasks → Adds a new task
+        PATCH /tasks/:id → Updates fields of a task
+        DELETE /tasks/:id → Soft deletes a task (marks deleted_at timestamp)
+        POST /tasks/:id/undo → Restores a soft-deleted task
     Middleware:
-        Uses express.json() to parse JSON request bodies.
-        Uses cors() so frontend can communicate without cross-origin issues.
+        Uses express.json() to parse JSON request bodies
+        Uses cors() so frontend can communicate without cross-origin issues
+```
 
-## What is inside the database?
+## Database Attributes
 1) id - unique id for each task (incremental)
 2) name 
 3) due_date 
@@ -80,43 +78,39 @@ c) **Database** - Sqlite                                    : easier learing cur
 8) deleted_at - for soft deletes (since we have an undo feature)
 
 ## How it works:
-1) User opens the app
-    browser loads index.html.
-    that file links pahuwaii.css (styling) and pahuwaii.js (logic).
-    initial task load
-    when pahuwaii.js runs, it calls loadTasks().
-    then it sends a GET /tasks request to server.js.
-    server.js queries the SQLite database and returns a JSON array of tasks.
-    pahuwaii.js then calls renderBoard() to display tasks in the correct columns.
+1) User opens the app  
+    &emsp; a) browser loads index.html  
+    &emsp; b) that file links pahuwaii.css (styling) and pahuwaii.js (logic)  
+    &emsp; c) initial task load  
+    &emsp; d) when pahuwaii.js runs, it calls loadTasks()  
+    &emsp; e) then it sends a GET /tasks request to server.js  
+    &emsp; f) server.js queries the SQLite database and returns a JSON array of tasks  
+    &emsp; g) pahuwaii.js then calls renderBoard() to display tasks in the correct columns   
 
-2) Adding a task
-    user opens the “Add Task” modal (frontend only).
-    on submit, JS sends a POST /tasks request to the backend with { name, due_date, due_time, priority, status }.
-    server.js inserts the new row into SQLite.
-    JS reloads tasks by calling loadTasks().
+3) Adding a task  
+    &emsp; a) user opens the “Add Task” modal (frontend only)  
+    &emsp; b) on submit, JS sends a POST /tasks request to the backend with { name, due_date, due_time, priority, status }  
+    &emsp; c) server.js inserts the new row into SQLite  
+    &emsp; d) JS reloads tasks by calling loadTasks()  
 
-3) Editing a task
-    user clicks edit.
-    modal opens with task details pre-filled from allTasks.
-    on submit, JS sends a PATCH /tasks/:id with the updated fields. 
-    server.js updates SQLite.
-    JS reloads tasks.
+4) Editing a task  
+    &emsp; a) user clicks edit  
+    &emsp; b) modal opens with task details pre-filled from allTasks  
+    &emsp; c) on submit, JS sends a PATCH /tasks/:id with the updated fields  
+    &emsp; d) server.js updates SQLite  
+    &emsp; e) JS reloads tasks  
 
-4) Updating inline fields (ex: user changes priority from dropdown)
-    triggers updateTaskField().
-    sends PATCH /tasks/:id with { priority: "do later" }.
-    server updates SQLite and frontend reloads tasks.
+5) Updating inline fields (ex: user changes priority from dropdown)  
+    &emsp; a) triggers updateTaskField()  
+    &emsp; b) sends PATCH /tasks/:id with { priority: "do later" }  
+    &emsp; c) server updates SQLite and frontend reloads tasks  
     
-5) Deleting + Undo
-    user clicks delete, JS shows confirmation modal.
-    on confirm, JS calls DELETE /tasks/:id.
-    server.js soft deletes the task by setting deleted_at to not null
-    JS shows Undo banner.
-    if Undo is clicked, JS calls POST /tasks/:id/undo, server sets deleted_at to null, frontend reloads tasks.
-
-6) Dark mode toggle
-    clicking the title toggles the .dark-mode class on <body>.
-    pahuwaii.css applies dark theme styles automatically.
+6) Deleting + Undo  
+    &emsp; a) user clicks delete, JS shows confirmation modal  
+    &emsp; b) on confirm, JS calls DELETE /tasks/:id  
+    &emsp; c) server.js soft deletes the task by setting deleted_at to not null  
+    &emsp; d) JS shows Undo banner  
+    &emsp; e) if Undo is clicked, JS calls POST /tasks/:id/undo, server sets deleted_at to null, frontend reloads tasks  
 
 
 ## Features to improve on:
@@ -127,6 +121,8 @@ c) **Database** - Sqlite                                    : easier learing cur
 
 
 ## Laboratory Tracking
+### Lab 1
+- to do list (TDLs)
 ### Lab 2
 - account creation (sign-up)
     - username and email
