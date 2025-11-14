@@ -8,8 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
-
+    <link
+      href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Material Symbols -->
     <link
@@ -23,31 +25,96 @@
   <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
     <!-- topbar -->
     <div class="w-full max-w-7xl flex items-center gap-4 mb-6">
+      <button
+        id="showSidebarBtn"
+        class="flex items-center justify-center text-black font-bold rounded-full w-10 h-10 text-3xl hover:bg-gray-100 transition-colors"
+        title="Show Sidebar"
+      >
+        <span class="material-symbols-outlined text-4xl"> lunch_dining </span>
+      </button>
 
-      <h1 id="titleToggle" class="text-2xl md:text-4xl kanban-title tracking-wide font-bold flex-1">
+      <h1
+        id="titleToggle"
+        class="text-xl md:text-4xl kanban-title tracking-wide font-bold flex-1"
+      >
         pahuwaii : 3
       </h1>
 
-      <a href="/auth.html" title="View Profile" class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200" aria-label="Open profile">
-        <span class="material-symbols-outlined text-4xl cursor-pointer">account_circle</span>
+      <a
+        href="/auth.html"
+        title="View Profile"
+        class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+        aria-label="Open profile"
+      >
+        <span class="material-symbols-outlined text-5xl cursor-pointer"
+          >account_circle</span
+        >
       </a>
     </div>
+
+    <aside
+      id="sidebar"
+      class="fixed top-0 left-0 h-full w-80 bg-white border-r-2 border-black transform -translate-x-full transition-transform duration-300 z-40 flex flex-col"
+    >
+      <div
+        class="p-4 border-b-2 border-black flex items-center justify-between"
+      >
+        <h2 class="text-2xl font-bold">Collaborative Lists</h2>
+        <button id="closeSidebarBtn" class="text-2xl hover:text-gray-600">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4">
+        <!-- My List -->
+        <div class="mb-4">
+          <button
+            id="myListBtn"
+            class="w-full text-left px-4 py-2 bg-blue-100 hover:bg-blue-200 border border-black rounded mb-2"
+          >
+            📝 My Personal List
+          </button>
+        </div>
+
+        <h3 class="font-bold mb-2">My Collaborative Lists</h3>
+        <div id="collabListsContainer">
+          <!-- Collaborative lists will be rendered here -->
+        </div>
+
+        <button
+          id="createListBtn"
+          class="mt-4 w-full px-4 py-2 bg-green-500 text-white border border-black rounded hover:bg-green-600"
+        >
+          + Create New List
+        </button>
+      </div>
+    </aside>
+
+    <!-- Overlay -->
+    <div
+      id="sidebarOverlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+    ></div>
 
     <!-- MAIN CONTAINER -->
     <div
       id="mainContainer"
       class="bg-white shadow-2xl w-full max-w-7xl flex flex-col border-2 border-black rounded flex-grow overflow-hidden"
-      style="min-height: calc(100vh - 220px);"
+      style="min-height: calc(100vh - 220px)"
     >
       <!-- top toolbar: add icon at left, sort on right -->
-      <div class="flex items-center justify-between px-4 md:px-6 py-3 border-b-2 border-black">
+      <div
+        class="flex items-center justify-between px-4 md:px-6 py-3 border-b-2 border-black"
+      >
         <div class="flex items-center gap-3">
           <button
             id="showFormBtn"
             class="flex items-center justify-center text-black font-bold rounded-full w-10 h-10 text-3xl hover:bg-gray-100 transition-colors"
             title="Add Task"
           >
-            <span class="material-symbols-outlined" style="font-size: 28px">add_circle</span>
+            <span class="material-symbols-outlined" style="font-size: 28px"
+              >add_circle</span
+            >
           </button>
         </div>
 
@@ -64,32 +131,57 @@
       </div>
 
       <!-- KANBAN COLUMNS: responsive, each column scrolls -->
-      <div class="flex flex-col md:flex-row gap-4 flex-1 p-4 md:p-6 min-h-0 overflow-auto md:overflow-visible">
+      <div
+        class="flex flex-col md:flex-row gap-4 flex-1 p-4 md:p-6 min-h-0 overflow-auto md:overflow-visible"
+      >
         <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
-          <div class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
-            <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
-            <div id="notStartedTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+          <div
+            class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">
+              To Do
+            </h2>
+            <div
+              id="notStartedTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
           </div>
         </div>
 
         <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
-          <div class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
-            <h2 class="font-bold text-xl kanban-title mb-4 text-black">In Progress</h2>
-            <div id="inProgressTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+          <div
+            class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">
+              In Progress
+            </h2>
+            <div
+              id="inProgressTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
           </div>
         </div>
 
         <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
-          <div class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
+          <div
+            class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
             <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
-            <div id="doneTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+            <div
+              id="doneTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
           </div>
         </div>
       </div>
 
       <!-- progress bar -->
       <div class="w-full h-6 border-t-2 border-black">
-        <div id="progressBar" class="h-6 bg-black transition-all duration-500" style="width: 0%"></div>
+        <div
+          id="progressBar"
+          class="h-6 bg-black transition-all duration-500"
+          style="width: 0%"
+        ></div>
       </div>
     </div>
     <!-- END OF MAIN CONTAINER -->
@@ -219,6 +311,77 @@
       <button id="undoBtn" class="bg-white text-black px-2 py-1 rounded">
         Undo
       </button>
+    </div>
+
+    <!-- CREATE COLLABORATIVE LIST MODAL -->
+    <div
+      id="createListModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded"
+    >
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Create New Collaborative List
+        </h2>
+        <form id="createListForm" class="grid grid-cols-1 gap-3">
+          <input
+            type="text"
+            id="newListName"
+            placeholder="List name"
+            required
+            class="border p-2 rounded"
+          />
+          <div class="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              id="cancelCreateListBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
+            >
+              Create
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- ADD MEMBERS MODAL -->
+    <div
+      id="addMembersModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded"
+    >
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Add Members to Collaborative List
+        </h2>
+        <form id="addMembersForm" class="grid grid-cols-1 gap-3">
+          <input
+            type="text"
+            id="memberEmails"
+            placeholder="Enter member emails, comma separated"
+            required
+            class="border p-2 rounded"
+          />
+          <div class="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              id="cancelAddMembersBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
+            >
+              Add Members
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <!-- js script -->

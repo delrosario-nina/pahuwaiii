@@ -184,7 +184,84 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     localStorage.setItem("catMode", catMode);
   });
+  document
+    .getElementById("changeProfilePicBtn")
+    .addEventListener("click", () => {
+      document.getElementById("profilePicModal").classList.remove("hidden");
+    });
+
+  document
+    .getElementById("closeProfilePicModal")
+    .addEventListener("click", () => {
+      document.getElementById("profilePicModal").classList.add("hidden");
+    });
+
+  // Setup avatar selection
+  const avatars = document.querySelectorAll(".avatar-option");
+  avatars.forEach((avatar) => {
+    avatar.addEventListener("click", async () => {
+      const selectedAvatar = avatar.getAttribute("data-avatar");
+
+      if (!selectedAvatar) {
+        console.error("No avatar selected");
+        return;
+      }
+
+      try {
+        const res = await fetch("/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + authToken,
+          },
+          body: JSON.stringify({ profile_picture: selectedAvatar }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Update preview image
+          document.getElementById("profilePicPreview").src = selectedAvatar;
+          currentUser.profile_picture = selectedAvatar;
+
+          // Close modal
+          document.getElementById("profilePicModal").classList.add("hidden");
+
+          // Show success toast
+          const updateProfileToast =
+            document.getElementById("updateProfileToast");
+          updateProfileToast.classList.remove("hidden");
+          setTimeout(() => {
+            updateProfileToast.classList.add("hidden");
+          }, 1500);
+        } else {
+          alert(data.error || "Failed to update profile picture");
+        }
+      } catch (err) {
+        console.error("Error updating profile picture:", err);
+        alert("Error updating profile picture");
+      }
+    });
+  });
 });
+
+// Update showProfile function to include profile picture
+function showProfile() {
+  authModal.classList.add("hidden");
+  landing.classList.add("hidden");
+  profileCard.classList.remove("hidden");
+
+  document.getElementById("profile_name_display_header").textContent =
+    currentUser.name || "";
+  document.getElementById("profile_name_display").textContent =
+    currentUser.name || "";
+  document.getElementById("profile_email_display").textContent =
+    currentUser.email || "";
+  document.getElementById("profile_bio_display").textContent =
+    currentUser.bio || "insert bio here";
+  document.getElementById("profilePicPreview").src =
+    currentUser.profile_picture || "user-modified.png";
+}
 
 function showLogin() {
   loginForm.classList.remove("hidden");

@@ -87,3 +87,30 @@ body.dark-mode button {
   color: #f0f0f0 !important;
   border-color: #777 !important;
 }
+
+
+/* Sidebar styles */
+#sidebar {
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Member avatars overlapping effect */
+#memberAvatars > div {
+  box-shadow: 0 0 0 2px white;
+}
+
+/* Profile dropdown */
+#profileDropdown {
+  min-width: 12rem;
+}
+
+/* Avatar selection */
+.avatar-option {
+  width: 80px;
+  height: 80px;
+}
+
+.avatar-option:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s;
+}
