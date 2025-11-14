@@ -22,15 +22,6 @@ let undoTimeout = null;
 let authToken = localStorage.getItem("authToken") || null;
 let currentUser = null;
 
-// Helper function to get auth headers with JWT token
-function getAuthHeaders() {
-  const token = localStorage.getItem("authToken");
-  return {
-    "Content-Type": "application/json",
-    "Authorization": token ? `Bearer ${token}` : ""
-  };
-}
-
 // DOM elements
 const taskModal = document.getElementById("taskModal");
 const showFormBtn = document.getElementById("showFormBtn");
@@ -54,12 +45,12 @@ const showViewBtn = document.getElementById("showViewBtn");
 // --- Kanban Board Rendering ---
 function loadSortFilter() {
   const savedSort = localStorage.getItem("sortBy") || "date_added";
-  if (sortBy) sortBy.value = savedSort;
+  sortBy.value = savedSort;
 }
 
 //task display
 function renderBoard() {
-  const sortValue = sortBy ? sortBy.value : "date_added";
+  const sortValue = sortBy.value;
   let tasks = [...allTasks];
 
   // sort tasks first by selected filter
@@ -91,7 +82,6 @@ function renderBoard() {
 
 function renderColumn(containerId, tasks) {
   const container = document.getElementById(containerId);
-  if (!container) return;
   container.innerHTML = "";
 
   tasks.forEach((task) => {
@@ -170,31 +160,26 @@ function renderColumn(containerId, tasks) {
 
     // checkbox handler
     const cb = document.getElementById(`cb_${task.id}`);
-    if (cb) {
-      cb.addEventListener("change", async function () {
-        cb.disabled = true;
-        const newStatus = cb.checked ? "done" : "to do"; //done if checked and to-do if not checked
-        try {
-          await updateStatus(task.id, newStatus);
-        } catch (err) {
-          cb.checked = !cb.checked;
-          alert("Failed to update status: " + err.message);
-        } finally {
-          cb.disabled = false;
-        }
-      });
-    }
+    cb.addEventListener("change", async function () {
+      cb.disabled = true;
+      const newStatus = cb.checked ? "done" : "to do"; //done if checked and to-do if not checked
+      try {
+        await updateStatus(task.id, newStatus);
+      } catch (err) {
+        cb.checked = !cb.checked;
+        alert("Failed to update status: " + err.message);
+      } finally {
+        cb.disabled = false;
+      }
+    });
   });
 }
 
 //API CALLS
-//get tasks from database thru server
+//get tasks from database thru server ??? figure out each if condition
 async function loadTasks() {
   try {
-    const res = await fetch(API_URL, {
-      method: "GET",
-      headers: getAuthHeaders()
-    });
+    const res = await fetch(API_URL);
     if (!res.ok) {
       //error handling
       const errText = await res.text();
@@ -221,7 +206,7 @@ async function loadTasks() {
 async function updateStatus(id, status) {
   const res = await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
-    headers: getAuthHeaders(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
   });
   if (!res.ok) {
@@ -235,7 +220,7 @@ async function updateStatus(id, status) {
 async function updateTaskField(id, field, value) {
   await fetch(`${API_URL}/${id}`, {
     method: "PATCH",
-    headers: getAuthHeaders(),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ [field]: value }),
   });
   await loadTasks();
@@ -246,145 +231,124 @@ function updateProgress(tasks) {
   const done = tasks.filter((t) => t.status === "done").length;
   const total = tasks.length;
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
-  const bar = document.getElementById("progressBar");
-  if (bar) bar.style.width = percent + "%";
+  document.getElementById("progressBar").style.width = percent + "%";
 }
 
 //utility functions for safe rendering
 function escapeHtml(text) {
   return String(text || "").replace(
-    /[&<>\\\"']/g,
-    (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" }[m])
+    /[&<>"']/g,
+    (m) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+        m
+      ])
   );
 }
 
 //EVENT HANDLERS
 // sorting
 loadSortFilter();
-if (sortBy) {
-  sortBy.addEventListener("change", function () {
-    localStorage.setItem("sortBy", sortBy.value); // save selected sort option
-    renderBoard();
-  });
-}
+sortBy.addEventListener("change", function () {
+  localStorage.setItem("sortBy", sortBy.value); // save selected sort option
+  renderBoard();
+});
 
 // add task
-if (showFormBtn) {
-  showFormBtn.addEventListener("click", () => {
-    if (taskModal) taskModal.classList.remove("hidden");
-    setTimeout(() => {
-      const nf = document.getElementById("name");
-      if (nf) nf.focus();
-    }, 60);
-  });
-}
+showFormBtn.addEventListener("click", () => {
+  taskModal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("name").focus(), 60);
+});
 
-if (cancelBtn) cancelBtn.addEventListener("click", () => taskModal && taskModal.classList.add("hidden"));
+cancelBtn.addEventListener("click", () => taskModal.classList.add("hidden"));
 
 // add task submit
-const taskForm = document.getElementById("taskForm");
-if (taskForm) {
-  taskForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = document.getElementById("name").value;
-    const due_date = document.getElementById("due_date").value;
-    const due_time = document.getElementById("due_time").value;
-    const priority = document.getElementById("priority").value;
+document.getElementById("taskForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("name").value;
+  const due_date = document.getElementById("due_date").value;
+  const due_time = document.getElementById("due_time").value;
+  const priority = document.getElementById("priority").value;
 
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          name,
-          due_date,
-          due_time,
-          priority,
-          status: "to do",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add task");
-      taskForm.reset(); //clear form
-      if (taskModal) taskModal.classList.add("hidden"); //hide modal
-      await loadTasks(); //refresh tasks so the newly added task shows up
-    } catch (err) {
-      alert("Error adding task: " + err.message);
-    }
-  });
-}
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        due_date,
+        due_time,
+        priority,
+        status: "to do",
+      }), //does the frontend send out json?
+    });
+    if (!res.ok) throw new Error("Failed to add task");
+    document.getElementById("taskForm").reset(); //clear form
+    taskModal.classList.add("hidden"); //hide modal
+    await loadTasks(); //refresh tasks so the newly added task shows up
+  } catch (err) {
+    alert("Error adding task: " + err.message);
+  }
+});
 
 // edit task
 window.openEditTaskModal = function (id) {
   const t = allTasks.find((x) => x.id === id);
   if (!t) return;
   editingTaskId = id;
-  const en = document.getElementById("edit_name");
-  if (en) en.value = t.name || "";
-  const edd = document.getElementById("edit_due_date");
-  if (edd) edd.value = t.due_date || "";
-  const edt = document.getElementById("edit_due_time");
-  if (edt) edt.value = t.due_time || "";
-  const ep = document.getElementById("edit_priority");
-  if (ep) ep.value = t.priority || "do now";
-  const es = document.getElementById("edit_status");
-  if (es) es.value = t.status || "to do";
-  if (editTaskModal) editTaskModal.classList.remove("hidden");
-  setTimeout(() => {
-    const en2 = document.getElementById("edit_name");
-    if (en2) en2.focus();
-  }, 60);
+  document.getElementById("edit_name").value = t.name || "";
+  document.getElementById("edit_due_date").value = t.due_date || "";
+  document.getElementById("edit_due_time").value = t.due_time || "";
+  document.getElementById("edit_priority").value = t.priority || "do now";
+  document.getElementById("edit_status").value = t.status || "to do";
+  editTaskModal.classList.remove("hidden");
+  setTimeout(() => document.getElementById("edit_name").focus(), 60);
 };
 
-if (cancelEditTaskBtn) cancelEditTaskBtn.addEventListener("click", () => {
-  if (editTaskModal) editTaskModal.classList.add("hidden");
+cancelEditTaskBtn.addEventListener("click", () => {
+  editTaskModal.classList.add("hidden");
   editingTaskId = null;
 });
 
-if (editTaskForm) {
-  editTaskForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!editingTaskId) return;
+editTaskForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!editingTaskId) return;
 
-    const name = document.getElementById("edit_name").value;
-    const due_date = document.getElementById("edit_due_date").value;
-    const due_time = document.getElementById("edit_due_time").value;
-    const priority = document.getElementById("edit_priority").value;
-    const status = document.getElementById("edit_status").value;
+  const name = document.getElementById("edit_name").value;
+  const due_date = document.getElementById("edit_due_date").value;
+  const due_time = document.getElementById("edit_due_time").value;
+  const priority = document.getElementById("edit_priority").value;
+  const status = document.getElementById("edit_status").value;
 
-    await fetch(`${API_URL}/${editingTaskId}`, {
-      method: "PATCH",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ name, due_date, due_time, priority, status }),
-    });
-
-    if (editTaskModal) editTaskModal.classList.add("hidden");
-    editingTaskId = null;
-    await loadTasks();
+  await fetch(`${API_URL}/${editingTaskId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, due_date, due_time, priority, status }),
   });
-}
+
+  editTaskModal.classList.add("hidden");
+  editingTaskId = null;
+  await loadTasks();
+});
 
 // delete confirmation
 function confirmDelete(id) {
   deleteIdPending = id;
-  if (deleteModal) deleteModal.classList.remove("hidden");
+  deleteModal.classList.remove("hidden");
 }
 
-if (cancelDeleteBtn) cancelDeleteBtn.addEventListener("click", () => {
+cancelDeleteBtn.addEventListener("click", () => {
   deleteIdPending = null;
-  if (deleteModal) deleteModal.classList.add("hidden");
+  deleteModal.classList.add("hidden");
 });
 
-if (confirmDeleteBtn) confirmDeleteBtn.addEventListener("click", async () => {
+confirmDeleteBtn.addEventListener("click", async () => {
   if (!deleteIdPending) return;
   const id = deleteIdPending;
   deleteIdPending = null;
-  if (deleteModal) deleteModal.classList.add("hidden");
+  deleteModal.classList.add("hidden");
 
   try {
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-      headers: getAuthHeaders()
-    });
+    const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const text = await res.text();
       alert("Delete failed: " + text);
@@ -404,7 +368,6 @@ if (confirmDeleteBtn) confirmDeleteBtn.addEventListener("click", async () => {
 
 // undo
 function showUndo() {
-  if (!undoBanner) return;
   undoBanner.style.display = "flex";
   clearTimeout(undoTimeout);
   undoTimeout = setTimeout(() => {
@@ -413,25 +376,22 @@ function showUndo() {
   }, 2000);
 }
 
-if (undoBtn) undoBtn.addEventListener("click", async () => {
+undoBtn.addEventListener("click", async () => {
   if (!lastDeletedTask) return;
   try {
-    await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, {
-      method: "POST",
-      headers: getAuthHeaders()
-    });
+    await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, { method: "POST" });
   } catch (err) {
     alert("Undo failed: " + err.message);
     return;
   }
   lastDeletedTask = null;
-  if (undoBanner) undoBanner.style.display = "none";
+  undoBanner.style.display = "none";
   clearTimeout(undoTimeout);
   await loadTasks();
 });
 
 // night mode toggle
-if (titleToggle) titleToggle.addEventListener("click", () => {
+titleToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark-mode");
 });
 

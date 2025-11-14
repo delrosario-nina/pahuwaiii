@@ -1,4 +1,4 @@
-require('dotenv').config(); //to use env variables for the nodemailer
+require("dotenv").config(); //to use env variables for the nodemailer
 
 //imports
 const express = require("express");
@@ -10,11 +10,9 @@ const jwt = require("jsonwebtoken"); //securely transmitting information between
 const JWT_SECRET = "supersecret"; //
 const nodemailer = require("nodemailer"); //send emails from a server-side application
 
-
 const app = express();
-app.use(cors());              //cors is needed for local testing with live server extension 
-app.use(express.json());      // for parsing application/json
-
+app.use(cors()); //cors is needed for local testing with live server extension
+app.use(express.json()); // for parsing application/json
 
 //create a database
 const db = new sqlite3.Database("todo.db", (err) => {
@@ -23,7 +21,6 @@ const db = new sqlite3.Database("todo.db", (err) => {
     process.exit(1);
   }
 });
-
 
 db.serialize(() => {
   db.run("PRAGMA foreign_keys = ON;");
@@ -54,40 +51,54 @@ db.serialize(() => {
   `);
 });
 
+// ========== JWT MIDDLEWARE ==========
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ error: "Missing token" });
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.user_id;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
+}
+
 // ========== API ==========
 
 // get all active tasks (deleted_at IS NULL)
-app.get("/tasks", (req, res) => {
-  db.all("SELECT * FROM tasks WHERE deleted_at IS NULL", [], (err, rows) => {
+app.get("/tasks", verifyToken, (req, res) => {
+  db.all("SELECT * FROM tasks WHERE deleted_at IS NULL AND user_id = ?", [req.userId], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
 });
 
 // get single task
-app.get("/tasks/:id", (req, res) => {
-  db.get("SELECT * FROM tasks WHERE id = ?", [req.params.id], (err, row) => {
+app.get("/tasks/:id", verifyToken, (req, res) => {
+  db.get("SELECT * FROM tasks WHERE id = ? AND user_id = ?", [req.params.id, req.userId], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: "Task not found" });
-    res.json(row); 
+    res.json(row);
   });
 });
 
 // create task
-app.post("/tasks", (req, res) => {
+app.post("/tasks", verifyToken, (req, res) => {
   const { name, due_date, due_time, priority, status } = req.body;
   const stmt = db.prepare(
-    "INSERT INTO tasks (name, due_date, due_time, priority, status, date_added, deleted_at) VALUES (?, ?, ?, ?, ?, datetime('now'), NULL)"
+    "INSERT INTO tasks (name, due_date, due_time, priority, status, date_added, deleted_at, user_id) VALUES (?, ?, ?, ?, ?, datetime('now'), NULL, ?)"
   );
-  stmt.run([name, due_date, due_time, priority, status], function (err) {
+  stmt.run([name, due_date, due_time, priority, status, req.userId], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ id: this.lastID, name, due_date, due_time, priority, status });
   });
-  stmt.finalize(); 
+  stmt.finalize();
 });
 
-// update task 
-app.patch("/tasks/:id", (req, res) => {
+// update task
+app.patch("/tasks/:id", verifyToken, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   const fields = Object.keys(updates)
@@ -96,34 +107,47 @@ app.patch("/tasks/:id", (req, res) => {
   const values = Object.values(updates);
   if (!fields) return res.status(400).json({ error: "No fields to update" });
 
-  db.run(`UPDATE tasks SET ${fields} WHERE id = ?`, [...values, id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ updated: this.changes });
-  });
+  db.run(
+    `UPDATE tasks SET ${fields} WHERE id = ? AND user_id = ?`,
+    [...values, id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ updated: this.changes });
+    }
+  );
 });
 
 // soft delete a task and return the deleted row
-app.delete("/tasks/:id", (req, res) => {
+app.delete("/tasks/:id", verifyToken, (req, res) => {
   const { id } = req.params;
-  db.get("SELECT * FROM tasks WHERE id = ?", [id], (err, task) => {
+  db.get("SELECT * FROM tasks WHERE id = ? AND user_id = ?", [id, req.userId], (err, task) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!task) return res.status(404).json({ error: "Task not found" });
 
-    db.run("UPDATE tasks SET deleted_at = datetime('now') WHERE id = ?", [id], function (deleteErr) {
-      if (deleteErr) return res.status(500).json({ error: deleteErr.message });
-      // return the original row for frontend undo
-      res.json(task);
-    });
+    db.run(
+      "UPDATE tasks SET deleted_at = datetime('now') WHERE id = ?",
+      [id],
+      function (deleteErr) {
+        if (deleteErr)
+          return res.status(500).json({ error: deleteErr.message });
+        // return the original row for frontend undo
+        res.json(task);
+      }
+    );
   });
 });
 
 // undo delete
-app.post("/tasks/:id/undo", (req, res) => {
+app.post("/tasks/:id/undo", verifyToken, (req, res) => {
   const { id } = req.params;
-  db.run("UPDATE tasks SET deleted_at = NULL WHERE id = ?", [id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ restored: this.changes });
-  });
+  db.run(
+    "UPDATE tasks SET deleted_at = NULL WHERE id = ? AND user_id = ?",
+    [id, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ restored: this.changes });
+    }
+  );
 });
 
 //for debugging (ma-show sa console)
@@ -132,14 +156,9 @@ app.post("/debug", (req, res) => {
   res.json({ received: req.body });
 });
 
-
-
 //
 //No need to anything before this code nina >:(
 //
-
-
-
 
 //For signup (error checking bcoz its a bitch)
 app.post("/signup", (req, res) => {
@@ -179,8 +198,6 @@ app.post("/signup", (req, res) => {
   });
 });
 
-
-
 // For login
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
@@ -192,7 +209,9 @@ app.post("/login", (req, res) => {
   db.get("SELECT * FROM users WHERE name = ?", [name], async (err, user) => {
     if (err) {
       console.error("Database error:", err);
-      return res.status(500).json({ error: "Server error, please try again later" });
+      return res
+        .status(500)
+        .json({ error: "Server error, please try again later" });
     }
 
     // If no user found with the given name
@@ -207,16 +226,19 @@ app.post("/login", (req, res) => {
     }
 
     // if everything is correct, issue a JWT token
-    const token = jwt.sign({ user_id: user.id }, JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign({ user_id: user.id }, JWT_SECRET, {
+      expiresIn: "1d",
+    });
     res.json({
       message: "Login successful",
       token,
+      user_id: user.id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      bio: user.bio,
     });
   });
 });
-
 
 //Getting data to display for the profile
 app.get("/profile", (req, res) => {
@@ -230,12 +252,16 @@ app.get("/profile", (req, res) => {
   } catch (err) {
     return res.status(401).json({ error: "Invalid token" });
   }
-  db.get("SELECT name, email FROM users WHERE id = ?", [userId], (err, user) => {
-    if (err || !user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
-  });
+  db.get(
+    "SELECT name, email, bio FROM users WHERE id = ?",
+    [userId],
+    (err, user) => {
+      if (err || !user)
+        return res.status(404).json({ error: "User not found" });
+      res.json(user);
+    }
+  );
 });
-
 
 // Editing the profile
 app.patch("/profile", (req, res) => {
@@ -256,13 +282,22 @@ app.patch("/profile", (req, res) => {
 
   let fields = [];
   let values = [];
-  if (name !== undefined) { fields.push("name = ?"); values.push(name); }
-  if (email !== undefined) { fields.push("email = ?"); values.push(email); }
-  if (bio !== undefined) { fields.push("bio = ?"); values.push(bio); }
+  if (name !== undefined) {
+    fields.push("name = ?");
+    values.push(name);
+  }
+  if (email !== undefined) {
+    fields.push("email = ?");
+    values.push(email);
+  }
+  if (bio !== undefined) {
+    fields.push("bio = ?");
+    values.push(bio);
+  }
 
+  if (!fields.length)
+    return res.status(400).json({ error: "No fields to update" });
 
-  if (!fields.length) return res.status(400).json({ error: "No fields to update" });
-  
   values.push(userId);
   db.run(
     `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
@@ -290,25 +325,32 @@ app.patch("/profile/password", (req, res) => {
 
   const { oldPassword, newPassword } = req.body;
 
-
   if (!oldPassword || !newPassword)
     return res.status(400).json({ error: "Missing old or new password" });
 
-  db.get("SELECT password FROM users WHERE id = ?", [userId], async (err, user) => {
-    if (err || !user) return res.status(500).json({ error: "User not found" });
+  db.get(
+    "SELECT password FROM users WHERE id = ?",
+    [userId],
+    async (err, user) => {
+      if (err || !user)
+        return res.status(500).json({ error: "User not found" });
 
-    const match = await bcrypt.compare(oldPassword, user.password);
-    if (!match) return res.status(401).json({ error: "Old password incorrect" });
+      const match = await bcrypt.compare(oldPassword, user.password);
+      if (!match)
+        return res.status(401).json({ error: "Old password incorrect" });
 
-    const hashed = await bcrypt.hash(newPassword, 10);
-    db.run("UPDATE users SET password = ? WHERE id = ?", [hashed, userId], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ message: "Password updated successfully" });
-    });
-  });
+      const hashed = await bcrypt.hash(newPassword, 10);
+      db.run(
+        "UPDATE users SET password = ? WHERE id = ?",
+        [hashed, userId],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ message: "Password updated successfully" });
+        }
+      );
+    }
+  );
 });
-
-
 
 // Request password reset
 app.post("/request-reset", (req, res) => {
@@ -318,14 +360,17 @@ app.post("/request-reset", (req, res) => {
     if (err || !user) return res.status(404).json({ error: "User not found" });
     const token = require("crypto").randomBytes(32).toString("hex");
     const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
-    db.run("UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?", [token, expiry, email]);
-    
+    db.run(
+      "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
+      [token, expiry, email]
+    );
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_APP_PASSWORD
-      }
+        pass: process.env.EMAIL_APP_PASSWORD,
+      },
     });
     const mailOptions = {
       from: "ninacloudia29@gmail.com",
@@ -336,7 +381,7 @@ app.post("/request-reset", (req, res) => {
              Please don't share this code with anyone: we'll never ask for it on the phone or via email.
              
              Thanks,
-             The Pahuwaii :3 Team`
+             The Pahuwaii :3 Team`,
     };
     transporter.sendMail(mailOptions, (error, info) => {
       if (error) {
@@ -351,16 +396,23 @@ app.post("/request-reset", (req, res) => {
 // Reset password
 app.post("/reset-password", async (req, res) => {
   const { token, new_password } = req.body;
-  if (!token || !new_password) return res.status(400).json({ error: "Missing fields" });
-  db.get("SELECT * FROM users WHERE reset_token = ?", [token], async (err, user) => {
-    if (err || !user || user.reset_token_expiry < Date.now())
-      return res.status(400).json({ error: "Invalid or expired token" });
-    const hashed = await bcrypt.hash(new_password, 10);
-    db.run("UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?", [hashed, user.id]);
-    res.json({ success: true });
-  });
+  if (!token || !new_password)
+    return res.status(400).json({ error: "Missing fields" });
+  db.get(
+    "SELECT * FROM users WHERE reset_token = ?",
+    [token],
+    async (err, user) => {
+      if (err || !user || user.reset_token_expiry < Date.now())
+        return res.status(400).json({ error: "Invalid or expired token" });
+      const hashed = await bcrypt.hash(new_password, 10);
+      db.run(
+        "UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?",
+        [hashed, user.id]
+      );
+      res.json({ success: true });
+    }
+  );
 });
-
 
 app.delete("/delete-account", (req, res) => {
   const authHeader = req.headers.authorization;
