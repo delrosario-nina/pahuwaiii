@@ -69,19 +69,27 @@ function verifyToken(req, res, next) {
 
 // get all active tasks (deleted_at IS NULL)
 app.get("/tasks", verifyToken, (req, res) => {
-  db.all("SELECT * FROM tasks WHERE deleted_at IS NULL AND user_id = ?", [req.userId], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
-  });
+  db.all(
+    "SELECT * FROM tasks WHERE deleted_at IS NULL AND user_id = ?",
+    [req.userId],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
 });
 
 // get single task
 app.get("/tasks/:id", verifyToken, (req, res) => {
-  db.get("SELECT * FROM tasks WHERE id = ? AND user_id = ?", [req.params.id, req.userId], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: "Task not found" });
-    res.json(row);
-  });
+  db.get(
+    "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+    [req.params.id, req.userId],
+    (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: "Task not found" });
+      res.json(row);
+    }
+  );
 });
 
 // create task
@@ -90,10 +98,13 @@ app.post("/tasks", verifyToken, (req, res) => {
   const stmt = db.prepare(
     "INSERT INTO tasks (name, due_date, due_time, priority, status, date_added, deleted_at, user_id) VALUES (?, ?, ?, ?, ?, datetime('now'), NULL, ?)"
   );
-  stmt.run([name, due_date, due_time, priority, status, req.userId], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ id: this.lastID, name, due_date, due_time, priority, status });
-  });
+  stmt.run(
+    [name, due_date, due_time, priority, status, req.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID, name, due_date, due_time, priority, status });
+    }
+  );
   stmt.finalize();
 });
 
@@ -120,21 +131,25 @@ app.patch("/tasks/:id", verifyToken, (req, res) => {
 // soft delete a task and return the deleted row
 app.delete("/tasks/:id", verifyToken, (req, res) => {
   const { id } = req.params;
-  db.get("SELECT * FROM tasks WHERE id = ? AND user_id = ?", [id, req.userId], (err, task) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!task) return res.status(404).json({ error: "Task not found" });
+  db.get(
+    "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
+    [id, req.userId],
+    (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!task) return res.status(404).json({ error: "Task not found" });
 
-    db.run(
-      "UPDATE tasks SET deleted_at = datetime('now') WHERE id = ?",
-      [id],
-      function (deleteErr) {
-        if (deleteErr)
-          return res.status(500).json({ error: deleteErr.message });
-        // return the original row for frontend undo
-        res.json(task);
-      }
-    );
-  });
+      db.run(
+        "UPDATE tasks SET deleted_at = datetime('now') WHERE id = ?",
+        [id],
+        function (deleteErr) {
+          if (deleteErr)
+            return res.status(500).json({ error: deleteErr.message });
+          // return the original row for frontend undo
+          res.json(task);
+        }
+      );
+    }
+  );
 });
 
 // undo delete

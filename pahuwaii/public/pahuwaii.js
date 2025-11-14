@@ -27,7 +27,7 @@ function getAuthHeaders() {
   const token = localStorage.getItem("authToken");
   return {
     "Content-Type": "application/json",
-    "Authorization": token ? `Bearer ${token}` : ""
+    Authorization: token ? `Bearer ${token}` : "",
   };
 }
 
@@ -193,7 +193,7 @@ async function loadTasks() {
   try {
     const res = await fetch(API_URL, {
       method: "GET",
-      headers: getAuthHeaders()
+      headers: getAuthHeaders(),
     });
     if (!res.ok) {
       //error handling
@@ -254,7 +254,10 @@ function updateProgress(tasks) {
 function escapeHtml(text) {
   return String(text || "").replace(
     /[&<>\\\"']/g,
-    (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '\"': "&quot;", "'": "&#39;" }[m])
+    (m) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[
+        m
+      ])
   );
 }
 
@@ -279,7 +282,11 @@ if (showFormBtn) {
   });
 }
 
-if (cancelBtn) cancelBtn.addEventListener("click", () => taskModal && taskModal.classList.add("hidden"));
+if (cancelBtn)
+  cancelBtn.addEventListener(
+    "click",
+    () => taskModal && taskModal.classList.add("hidden")
+  );
 
 // add task submit
 const taskForm = document.getElementById("taskForm");
@@ -335,10 +342,11 @@ window.openEditTaskModal = function (id) {
   }, 60);
 };
 
-if (cancelEditTaskBtn) cancelEditTaskBtn.addEventListener("click", () => {
-  if (editTaskModal) editTaskModal.classList.add("hidden");
-  editingTaskId = null;
-});
+if (cancelEditTaskBtn)
+  cancelEditTaskBtn.addEventListener("click", () => {
+    if (editTaskModal) editTaskModal.classList.add("hidden");
+    editingTaskId = null;
+  });
 
 if (editTaskForm) {
   editTaskForm.addEventListener("submit", async (e) => {
@@ -369,38 +377,40 @@ function confirmDelete(id) {
   if (deleteModal) deleteModal.classList.remove("hidden");
 }
 
-if (cancelDeleteBtn) cancelDeleteBtn.addEventListener("click", () => {
-  deleteIdPending = null;
-  if (deleteModal) deleteModal.classList.add("hidden");
-});
+if (cancelDeleteBtn)
+  cancelDeleteBtn.addEventListener("click", () => {
+    deleteIdPending = null;
+    if (deleteModal) deleteModal.classList.add("hidden");
+  });
 
-if (confirmDeleteBtn) confirmDeleteBtn.addEventListener("click", async () => {
-  if (!deleteIdPending) return;
-  const id = deleteIdPending;
-  deleteIdPending = null;
-  if (deleteModal) deleteModal.classList.add("hidden");
+if (confirmDeleteBtn)
+  confirmDeleteBtn.addEventListener("click", async () => {
+    if (!deleteIdPending) return;
+    const id = deleteIdPending;
+    deleteIdPending = null;
+    if (deleteModal) deleteModal.classList.add("hidden");
 
-  try {
-    const res = await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-      headers: getAuthHeaders()
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      alert("Delete failed: " + text);
-      return;
-    }
     try {
-      lastDeletedTask = await res.json();
-    } catch (e) {
-      lastDeletedTask = null;
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        alert("Delete failed: " + text);
+        return;
+      }
+      try {
+        lastDeletedTask = await res.json();
+      } catch (e) {
+        lastDeletedTask = null;
+      }
+      await loadTasks();
+      if (lastDeletedTask) showUndo();
+    } catch (err) {
+      alert("Delete failed: " + err.message);
     }
-    await loadTasks();
-    if (lastDeletedTask) showUndo();
-  } catch (err) {
-    alert("Delete failed: " + err.message);
-  }
-});
+  });
 
 // undo
 function showUndo() {
@@ -413,27 +423,29 @@ function showUndo() {
   }, 2000);
 }
 
-if (undoBtn) undoBtn.addEventListener("click", async () => {
-  if (!lastDeletedTask) return;
-  try {
-    await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, {
-      method: "POST",
-      headers: getAuthHeaders()
-    });
-  } catch (err) {
-    alert("Undo failed: " + err.message);
-    return;
-  }
-  lastDeletedTask = null;
-  if (undoBanner) undoBanner.style.display = "none";
-  clearTimeout(undoTimeout);
-  await loadTasks();
-});
+if (undoBtn)
+  undoBtn.addEventListener("click", async () => {
+    if (!lastDeletedTask) return;
+    try {
+      await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+    } catch (err) {
+      alert("Undo failed: " + err.message);
+      return;
+    }
+    lastDeletedTask = null;
+    if (undoBanner) undoBanner.style.display = "none";
+    clearTimeout(undoTimeout);
+    await loadTasks();
+  });
 
 // night mode toggle
-if (titleToggle) titleToggle.addEventListener("click", () => {
-  document.body.classList.toggle("dark-mode");
-});
+if (titleToggle)
+  titleToggle.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+  });
 
 // --- Initialization ---
 loadTasks();
