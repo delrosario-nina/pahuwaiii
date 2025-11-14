@@ -1,16 +1,17 @@
-PAHUWAII :3
+# PAHUWAII :3
 
 For a student overwhelmed by numerous backlogs everyday, creating a to-do list may seem too stimulating and daunting. Pahuwaii aims to be a to-do list that is easy to the eyes and accommodating to students that are easily overstimulated. 
 
-Tech Stack:
-    a) Frontend - HTML, CSS (+tailwind), JavaScript
-    b) Backend - Node.js + Express                          : javascript all throughout 
-    c) Database - Sqlite                                    : easier learing curve and one file only
+## Tech Stack:
+    a) **Frontend** - HTML, CSS (+tailwind), JavaScript
+    b) **Backend** - Node.js + Express                          : javascript all throughout 
+    c) **Database** - Sqlite                                    : easier learing curve and one file only
 
-How to run the web app: Run the node.js file (using the command node server.js) and then click the link provided (http://locahlhost:3000)
+> [!IMPORTANT]
+> How to run the web app:
+> Run the node.js file (using the command node server.js) and then click the link provided (http://locahlhost:3000)
 
-Breakdown of each file
-
+## File Breakdown
 1) index.html - the skeleton of the code
     What's inside?
     Links to external resources:
@@ -18,13 +19,13 @@ Breakdown of each file
         Google Fonts (for handwritten style hehe :3),
         Material Symbols (for icons),
         CSS (pahuwaii.css) and JS (pahuwaii.js).
-
     DOM elements:
         Top bar (title + profile button).
         Main kanban board with 3 columns (to do, in progress, done).
         Progress bar that updates as tasks are completed.
         Modals (popups) for adding, editing, deleting tasks.
         Undo banner for restoring recently deleted tasks.
+
 2) pahuwaii.css - the design (not covered in tailwind)
     What's inside?
         Resetting default styles (removing margins, setting background, fonts).
@@ -67,7 +68,7 @@ Breakdown of each file
         Uses express.json() to parse JSON request bodies.
         Uses cors() so frontend can communicate without cross-origin issues.
 
-What is inside the database?
+## What is inside the database?
 1) id - unique id for each task (incremental)
 2) name 
 3) due_date 
@@ -77,7 +78,7 @@ What is inside the database?
 7) date_added (for sorting)
 8) deleted_at - for soft deletes (since we have an undo feature)
 
-How it works:
+## How it works:
 1) User opens the app
     browser loads index.html.
     that file links pahuwaii.css (styling) and pahuwaii.js (logic).
@@ -117,15 +118,15 @@ How it works:
     pahuwaii.css applies dark theme styles automatically.
 
 
-Features to improve on:
-- tasks with long names (ga-overflow sya rn)
-- night mode
+## Features to improve on:
+- tasks with long names (string overflow)
 - colors for the priority dropdown (tailwind dropdown colors)
 - when you uncheck the checkbox, it always goes back to 'to do', not considering its previous status
 - drag to change status
 
 
-Lab 2
+## Laboratory Tracking
+### Lab 2
 - account creation (sign-up)
     - username and email
     - password
@@ -133,4 +134,7 @@ Lab 2
     - name of user 
         - max of 20 characters
     - security back-up question
-    -
+### Lab 3
+- integration of labs 1 and 2
+- user can only access their own TDL
+- data persistence
