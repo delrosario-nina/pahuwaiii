@@ -90,85 +90,94 @@
   </div>
 
   <!-- Profile Card -->
-<div id="profileCard" class="hidden flex flex-col items-center justify-center max-h-6xl p-8 w-full max-w-6xl mx-auto">
-  <div class="relative bg-white shadow-2xl p-10 w-full max-w-7xl flex flex-row gap-10 border-2 border-black"
-       style="font-family: 'Schoolbell', cursive; border-radius: 28px; aspect-ratio: 16 / 8;">
+  <div id="profileCard" class="hidden flex flex-col items-center justify-center max-h-6xl p-8 w-full max-w-6xl mx-auto">
+    <div class="relative bg-white shadow-2xl p-10 w-full max-w-7xl flex flex-row gap-10 border-2 border-black"
+         style="font-family: 'Schoolbell', cursive; border-radius: 28px; aspect-ratio: 16 / 8;">
 
-    <button id="logoutBtn"
-      class="absolute top-6 right-10 px-6 py-2 bg-[#EB7078] border-2 border-black rounded-xl text-l font-bold hover:bg-[#E33B46] transition-all">
-      SIGN OUT
-    </button>
+      <!-- Back Button - Top Left -->
+      <a href="/index.html" 
+        class="absolute top-6 left-10 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200" 
+        title="Back to board">
+        <span class="material-icons-outlined text-4xl cursor-pointer">arrow_back</span>
+      </a>
 
-    <!-- Profile Info Section -->
-    <div class="flex flex-col items-center flex-1 justify-center">
-      <h2 class="text-4xl font-bold mb-6"><span id="profile_name_display_header"></span>'s Profile :3</h2>
-      <span class="material-icons-outlined text-[100px] mb-6 border-2 border-black rounded-full">
-        <img src="user-modified.png" alt="User Avatar" class="size-32 object-cover rounded-full">
-      </span>
+      <!-- Sign Out Button - Top Right -->
+      <button id="logoutBtn"
+        class="absolute top-6 right-10 px-6 py-2 bg-[#EB7078] border-2 border-black rounded-xl text-l font-bold hover:bg-[#E33B46] transition-all">
+        SIGN OUT
+      </button>
 
-      <div class="text-left w-full max-w-xs text-xl">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="font-bold">Name:</span>
-          <span id="profile_name_display" class="underline"></span>
-          <span id="editNameBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Name">edit</span>
+      <!-- Profile Info Section -->
+      <div class="flex flex-col items-center flex-1 justify-center">
+        <h2 class="text-4xl font-bold mb-6"><span id="profile_name_display_header"></span>'s Profile :3</h2>
+        <span class="material-icons-outlined text-[100px] mb-6 border-2 border-black rounded-full">
+          <img src="user-modified.png" alt="User Avatar" class="size-32 object-cover rounded-full">
+        </span>
+
+        <div class="text-left w-full max-w-xs text-xl">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="font-bold">Name:</span>
+            <span id="profile_name_display" class="underline"></span>
+            <span id="editNameBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Name">edit</span>
+          </div>
+
+          <div class="mb-2">
+            <span class="font-bold">Email:</span>
+            <span id="profile_email_display" class="underline"></span>
+            <span id="editEmailBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Email">edit</span>
+          </div>
+
+          <div class="flex items-center gap-2 mb-2">
+            <span class="font-bold">Bio:</span>
+            <span id="profile_bio_display" class="italic">insert bio here</span>
+            <span id="editBioBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Bio">edit</span>
+          </div>
         </div>
 
-        <div class="mb-2">
-          <span class="font-bold">Email:</span>
-          <span id="profile_email_display" class="underline"></span>
-          <span id="editEmailBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Email">edit</span>
-        </div>
-
-        <div class="flex items-center gap-2 mb-2">
-          <span class="font-bold">Bio:</span>
-          <span id="profile_bio_display" class="italic">insert bio here</span>
-          <span id="editBioBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Bio">edit</span>
+        <div id="updateProfileToast"
+          class="hidden absolute z-50 bottom-10 bg-[#7c69bd] text-white px-4 py-2 rounded-lg shadow-lg">
+          profile updated successfully! (๑•̀ㅂ•́)و✧
         </div>
       </div>
 
-      <div id="updateProfileToast"
-        class="hidden absolute z-50 bottom-10 bg-[#7c69bd] text-white px-4 py-2 rounded-lg shadow-lg">
-        profile updated successfully! (๑•̀ㅂ•́)و✧
-      </div>
-    </div>
+      <div class="flex flex-col flex-1 border-2 border-black p-6 bg-gray-100 justify-start mt-12"
+           style="border-radius: 20px;">
 
-    <div class="flex flex-col flex-1 border-2 border-black p-6 bg-gray-100 justify-start mt-12"
-         style="border-radius: 20px;">
+        <div class="mb-6">
+          <h3 class="text-3xl font-bold mb-4 text-left">Settings</h3>
+          <div class="text-2xl font-bold mb-3">Account</div>
+          <button id="changePasswordBtn"
+            class="w-full bg-white border-2 border-black rounded-xl p-3 mb-3 text-left text-lg hover:bg-gray-200 transition-all">
+            Change your Password
+          </button>
+          <button id="deleteAccountBtn"
+            class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg text-red-500 hover:bg-red-100 transition-all">
+            Delete your account
+          </button>
+        </div>
 
-      <div class="mb-6">
-        <h3 class="text-3xl font-bold mb-4 text-left">Settings</h3>
-        <div class="text-2xl font-bold mb-3">Account</div>
-        <button id="changePasswordBtn"
-          class="w-full bg-white border-2 border-black rounded-xl p-3 mb-3 text-left text-lg hover:bg-gray-200 transition-all">
-          Change your Password
-        </button>
-        <button id="deleteAccountBtn"
-          class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg text-red-500 hover:bg-red-100 transition-all">
-          Delete your account
-        </button>
-      </div>
+        <div>
+          <div class="text-2xl font-bold mb-3">Accessibility</div>
+          <label class="flex items-center gap-3 mb-2 text-lg">
+            <input type="checkbox" id="darkModeToggle" class="w-5 h-5 accent-black">
+            <span>Turn on <span class="font-bold">Dark Mode</span></span>
+          </label>
 
-      <div>
-        <div class="text-2xl font-bold mb-3">Accessibility</div>
-        <label class="flex items-center gap-3 mb-2 text-lg">
-          <input type="checkbox" id="darkModeToggle" class="w-5 h-5 accent-black">
-          <span>Turn on <span class="font-bold">Dark Mode</span></span>
-        </label>
+          <!-- Cleaned Cat Mode Button -->
+          <button id="catModeToggle"
+            class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg font-bold hover:bg-gray-200 transition-all">
+            Cat Mode
+          </button>
 
-        <!-- Cleaned Cat Mode Button -->
-        <button id="catModeToggle"
-          class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg font-bold hover:bg-gray-200 transition-all">
-          Cat Mode
-        </button>
-
-        <div id="catToast"
-          class="hidden fixed z-50 bottom-20 right-1 -translate-x-[70%] bg-[#fffdd7] px-4 py-2 rounded-lg shadow-lg">
-          /| _ ╱|、<br> ( •̀ㅅ •́  )<br> ＿ノ ヽ ノ＼＿<br> /　`/ ⌒Ｙ⌒ Ｙ　 \<br> ( 　(三ヽ人　 /　 　|<br> |　ﾉ⌒＼ ￣￣ヽ　 ノ<br> ヽ＿＿＿＞､＿＿／<br> ｜( 王 ﾉ〈<br> /ﾐ`ー―彡\
+          <div id="catToast"
+            class="hidden fixed z-50 bottom-20 right-1 -translate-x-[70%] bg-[#fffdd7] px-4 py-2 rounded-lg shadow-lg">
+            /| _ ╱|、<br> ( •̀ㅅ •́  )<br> ＿ノ ヽ ノ＼＿<br> /　`/ ⌒Ｙ⌒ Ｙ　 \<br> ( 　(三ヽ人　 /　 　|<br> |　ﾉ⌒＼ ￣￣ヽ　 ノ<br> ヽ＿＿＿＞､＿＿／<br> ｜( 王 ﾉ〈<br> /ﾐ`ー―彡\
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
+
 
   <!-- Edit Field Modal -->
   <div id="editFieldModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">

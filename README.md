@@ -3,15 +3,16 @@
 For a student overwhelmed by numerous backlogs everyday, creating a to-do list may seem too stimulating and daunting. Pahuwaii aims to be a to-do list that is easy to the eyes and accommodating to students that are easily overstimulated. 
 
 ## Tech Stack:
-    a) **Frontend** - HTML, CSS (+tailwind), JavaScript
-    b) **Backend** - Node.js + Express                          : javascript all throughout 
-    c) **Database** - Sqlite                                    : easier learing curve and one file only
+a) **Frontend** - HTML, CSS (+tailwind), JavaScript
+b) **Backend** - Node.js + Express                          : javascript all throughout 
+c) **Database** - Sqlite                                    : easier learing curve and one file only
 
 > [!IMPORTANT]
 > How to run the web app:
 > Run the node.js file (using the command node server.js) and then click the link provided (http://locahlhost:3000)
 
 ## File Breakdown
+<!-- to fix: line breaks -->
 1) index.html - the skeleton of the code
     What's inside?
     Links to external resources:

@@ -8,10 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Google Font -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+
 
     <!-- Material Symbols -->
     <link
@@ -22,96 +20,76 @@
     <link rel="stylesheet" href="pahuwaii.css" />
   </head>
 
-  <body class="min-h-screen flex flex-col items-center p-8">
-    <div class="w-[4%]">
-      <button id="NavbarBtn" title="Navigation Hamburger">
-        <span class="material-symbols-outlined" style="font-size: 48px">
-          lunch_dining
-        </span>
-      </button>
-    </div>
-    <div class="flex justify-between items-center w-[96%] max-w-7xl mb-6">
-      <!-- toggle for nightmode -->
-      <h1
-        id="titleToggle"
-        class="text-5xl kanban-title tracking-wide font-bold text-center"
-      >
+  <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+    <!-- topbar -->
+    <div class="w-full max-w-7xl flex items-center gap-4 mb-6">
+
+      <h1 id="titleToggle" class="text-2xl md:text-4xl kanban-title tracking-wide font-bold flex-1">
         pahuwaii : 3
       </h1>
 
-      <!-- for the user's profile -->
-      <button id="showViewBtn" title="View Profile">
-        <span class="material-symbols-outlined" style="font-size: 48px"
-          >account_circle</span
-        >
-      </button>
+      <a href="/auth.html" title="View Profile" class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200" aria-label="Open profile">
+        <span class="material-symbols-outlined text-4xl cursor-pointer">account_circle</span>
+      </a>
     </div>
 
     <!-- MAIN CONTAINER -->
     <div
-      class="bg-white shadow-2xl w-[96%] max-w-7xl flex flex-col border-2 border-black flex-grow rounded"
-      style="min-height: 0"
+      id="mainContainer"
+      class="bg-white shadow-2xl w-full max-w-7xl flex flex-col border-2 border-black rounded flex-grow overflow-hidden"
+      style="min-height: calc(100vh - 220px);"
     >
-      <!-- add task + sort by dropdown -->
-      <div
-        class="flex justify-between items-center px-6 py-3 border-b-2 border-black"
-      >
-        <button
-          id="showFormBtn"
-          class="flex items-center justify-center text-black font-bold transition rounded-full w-10 h-10 text-3xl"
-          title="Add Task"
-        >
-          <span class="material-symbols-outlined" style="font-size: 32px"
-            >add_circle</span
+      <!-- top toolbar: add icon at left, sort on right -->
+      <div class="flex items-center justify-between px-4 md:px-6 py-3 border-b-2 border-black">
+        <div class="flex items-center gap-3">
+          <button
+            id="showFormBtn"
+            class="flex items-center justify-center text-black font-bold rounded-full w-10 h-10 text-3xl hover:bg-gray-100 transition-colors"
+            title="Add Task"
           >
-        </button>
-        <select
-          id="sortBy"
-          class="border-2 border-black px-3 py-2 text-sm rounded"
-        >
-          <option value="date_added">Date Added</option>
-          <option value="due_date">Due Date</option>
-          <option value="priority">Priority</option>
-        </select>
+            <span class="material-symbols-outlined" style="font-size: 28px">add_circle</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <select
+            id="sortBy"
+            class="border-2 border-black px-3 py-2 text-sm rounded hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <option value="date_added">Date Added</option>
+            <option value="due_date">Due Date</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
       </div>
 
-      <!-- KANBAN COLUMNS -->
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 p-6 min-h-0">
-        <!-- to do column -->
-        <div
-          class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
-          <div id="notStartedTasks" class="kanban-scroll pr-2"></div>
+      <!-- KANBAN COLUMNS: responsive, each column scrolls -->
+      <div class="flex flex-col md:flex-row gap-4 flex-1 p-4 md:p-6 min-h-0 overflow-auto md:overflow-visible">
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
+            <div id="notStartedTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+          </div>
         </div>
 
-        <!-- in progress column -->
-        <div
-          class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">
-            In Progress
-          </h2>
-          <div id="inProgressTasks" class="kanban-scroll pr-2"></div>
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">In Progress</h2>
+            <div id="inProgressTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+          </div>
         </div>
 
-        <!-- done column -->
-        <div
-          class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
-          <div id="doneTasks" class="kanban-scroll pr-2"></div>
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]">
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
+            <div id="doneTasks" class="kanban-scroll flex-1 pr-2 overflow-y-auto"></div>
+          </div>
         </div>
       </div>
 
       <!-- progress bar -->
       <div class="w-full h-6 border-t-2 border-black">
-        <div
-          id="progressBar"
-          class="h-6 bg-black transition-all duration-500"
-          style="width: 0%"
-        ></div>
+        <div id="progressBar" class="h-6 bg-black transition-all duration-500" style="width: 0%"></div>
       </div>
     </div>
     <!-- END OF MAIN CONTAINER -->
@@ -245,98 +223,5 @@
 
     <!-- js script -->
     <script src="pahuwaii.js"></script>
-
-    <!-- PROFILE MODAL (opened from account icon) -->
-    <div
-      id="profileCard"
-      class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-    >
-      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl">
-        <button
-          id="closeProfileBtn"
-          class="float-right px-3 py-1 bg-gray-200 rounded"
-        >
-          Close
-        </button>
-        <h2 class="text-2xl font-bold mb-4">
-          <span id="profile_name_display_header"></span>'s Profile
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p>
-              <strong>Name:</strong> <span id="profile_name_display"></span>
-            </p>
-            <p>
-              <strong>Email:</strong> <span id="profile_email_display"></span>
-            </p>
-            <p>
-              <strong>Bio:</strong>
-              <span id="profile_bio_display">insert bio here</span>
-            </p>
-          </div>
-          <div>
-            <button
-              id="profileSignOut"
-              class="mt-2 px-4 py-2 bg-red-500 text-white rounded"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      (function () {
-        const profileCard = document.getElementById("profileCard");
-        const showViewBtn = document.getElementById("showViewBtn");
-        const closeBtn = document.getElementById("closeProfileBtn");
-        const signOutBtn = document.getElementById("profileSignOut");
-
-        async function openProfile() {
-          const token = localStorage.getItem("authToken");
-          if (!token) {
-            window.location = "/auth.html";
-            return;
-          }
-          try {
-            const res = await fetch("/profile", {
-              headers: { Authorization: "Bearer " + token },
-            });
-            if (!res.ok) {
-              localStorage.removeItem("authToken");
-              window.location = "/auth.html";
-              return;
-            }
-            const data = await res.json();
-            document.getElementById("profile_name_display").textContent =
-              data.name || "";
-            document.getElementById("profile_email_display").textContent =
-              data.email || "";
-            document.getElementById("profile_bio_display").textContent =
-              data.bio || "";
-            document.getElementById("profile_name_display_header").textContent =
-              data.name || "";
-            profileCard.classList.remove("hidden");
-          } catch (err) {
-            console.error("Failed to load profile", err);
-            localStorage.removeItem("authToken");
-            window.location = "/auth.html";
-          }
-        }
-
-        if (showViewBtn) showViewBtn.addEventListener("click", openProfile);
-        if (closeBtn)
-          closeBtn.addEventListener("click", () =>
-            profileCard.classList.add("hidden")
-          );
-        if (signOutBtn)
-          signOutBtn.addEventListener("click", () => {
-            localStorage.removeItem("authToken");
-            profileCard.classList.add("hidden");
-            window.location = "/auth.html";
-          });
-      })();
-    </script>
   </body>
 </html>

@@ -31,30 +31,25 @@ function getAuthHeaders() {
   };
 }
 
-// DOM elements
-const taskModal = document.getElementById("taskModal");
-const showFormBtn = document.getElementById("showFormBtn");
-const cancelBtn = document.getElementById("cancelBtn");
-const sortBy = document.getElementById("sortBy");
-
-const editTaskModal = document.getElementById("editTaskModal");
-const editTaskForm = document.getElementById("editTaskForm");
-const cancelEditTaskBtn = document.getElementById("cancelEditTaskBtn");
-
-const deleteModal = document.getElementById("deleteModal");
-const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
-
-const undoBanner = document.getElementById("undoBanner");
-const undoBtn = document.getElementById("undoBtn");
-
-const titleToggle = document.getElementById("titleToggle");
-const showViewBtn = document.getElementById("showViewBtn");
+// DOM elements - will be initialized after DOM loads
+let taskModal;
+let showFormBtn;
+let cancelBtn;
+let sortBy;
+let editTaskModal;
+let editTaskForm;
+let cancelEditTaskBtn;
+let deleteModal;
+let confirmDeleteBtn;
+let cancelDeleteBtn;
+let undoBanner;
+let undoBtn;
+let titleToggle;
+let showViewBtn;
 
 // --- Kanban Board Rendering ---
 function loadSortFilter() {
-  const savedSort = localStorage.getItem("sortBy") || "date_added";
-  if (sortBy) sortBy.value = savedSort;
+  if (sortBy) sortBy.value = localStorage.getItem("sortBy") || "date_added";
 }
 
 //task display
@@ -262,190 +257,240 @@ function escapeHtml(text) {
 }
 
 //EVENT HANDLERS
-// sorting
-loadSortFilter();
-if (sortBy) {
-  sortBy.addEventListener("change", function () {
-    localStorage.setItem("sortBy", sortBy.value); // save selected sort option
-    renderBoard();
-  });
-}
+document.addEventListener("DOMContentLoaded", () => {
+  // Initialize DOM elements
+  taskModal = document.getElementById("taskModal");
+  showFormBtn = document.getElementById("showFormBtn");
+  cancelBtn = document.getElementById("cancelBtn");
+  sortBy = document.getElementById("sortBy");
+  editTaskModal = document.getElementById("editTaskModal");
+  editTaskForm = document.getElementById("editTaskForm");
+  cancelEditTaskBtn = document.getElementById("cancelEditTaskBtn");
+  deleteModal = document.getElementById("deleteModal");
+  confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+  cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
+  undoBanner = document.getElementById("undoBanner");
+  undoBtn = document.getElementById("undoBtn");
+  titleToggle = document.getElementById("titleToggle");
+  showViewBtn = document.getElementById("showViewBtn");
 
-// add task
-if (showFormBtn) {
-  showFormBtn.addEventListener("click", () => {
-    if (taskModal) taskModal.classList.remove("hidden");
+  // sorting
+  loadSortFilter();
+  if (sortBy) {
+    sortBy.addEventListener("change", function () {
+      localStorage.setItem("sortBy", sortBy.value); // save selected sort option
+      renderBoard();
+    });
+  }
+
+  // add task
+  if (showFormBtn) {
+    showFormBtn.addEventListener("click", () => {
+      if (taskModal) taskModal.classList.remove("hidden");
+      setTimeout(() => {
+        const nf = document.getElementById("name");
+        if (nf) nf.focus();
+      }, 60);
+    });
+  }
+
+  if (cancelBtn)
+    cancelBtn.addEventListener(
+      "click",
+      () => taskModal && taskModal.classList.add("hidden")
+    );
+
+  // add task submit
+  const taskForm = document.getElementById("taskForm");
+  if (taskForm) {
+    taskForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const due_date = document.getElementById("due_date").value;
+      const due_time = document.getElementById("due_time").value;
+      const priority = document.getElementById("priority").value;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            name,
+            due_date,
+            due_time,
+            priority,
+            status: "to do",
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to add task");
+        taskForm.reset(); //clear form
+        if (taskModal) taskModal.classList.add("hidden"); //hide modal
+        await loadTasks(); //refresh tasks so the newly added task shows up
+      } catch (err) {
+        alert("Error adding task: " + err.message);
+      }
+    });
+  }
+  // edit task
+  window.openEditTaskModal = function (id) {
+    const t = allTasks.find((x) => x.id === id);
+    if (!t) return;
+    editingTaskId = id;
+    const en = document.getElementById("edit_name");
+    if (en) en.value = t.name || "";
+    const edd = document.getElementById("edit_due_date");
+    if (edd) edd.value = t.due_date || "";
+    const edt = document.getElementById("edit_due_time");
+    if (edt) edt.value = t.due_time || "";
+    const ep = document.getElementById("edit_priority");
+    if (ep) ep.value = t.priority || "do now";
+    const es = document.getElementById("edit_status");
+    if (es) es.value = t.status || "to do";
+    if (editTaskModal) editTaskModal.classList.remove("hidden");
     setTimeout(() => {
-      const nf = document.getElementById("name");
-      if (nf) nf.focus();
+      const en2 = document.getElementById("edit_name");
+      if (en2) en2.focus();
     }, 60);
-  });
-}
+  };
 
-if (cancelBtn)
-  cancelBtn.addEventListener(
-    "click",
-    () => taskModal && taskModal.classList.add("hidden")
-  );
-
-// add task submit
-const taskForm = document.getElementById("taskForm");
-if (taskForm) {
-  taskForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = document.getElementById("name").value;
-    const due_date = document.getElementById("due_date").value;
-    const due_time = document.getElementById("due_time").value;
-    const priority = document.getElementById("priority").value;
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          name,
-          due_date,
-          due_time,
-          priority,
-          status: "to do",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add task");
-      taskForm.reset(); //clear form
-      if (taskModal) taskModal.classList.add("hidden"); //hide modal
-      await loadTasks(); //refresh tasks so the newly added task shows up
-    } catch (err) {
-      alert("Error adding task: " + err.message);
-    }
-  });
-}
-
-// edit task
-window.openEditTaskModal = function (id) {
-  const t = allTasks.find((x) => x.id === id);
-  if (!t) return;
-  editingTaskId = id;
-  const en = document.getElementById("edit_name");
-  if (en) en.value = t.name || "";
-  const edd = document.getElementById("edit_due_date");
-  if (edd) edd.value = t.due_date || "";
-  const edt = document.getElementById("edit_due_time");
-  if (edt) edt.value = t.due_time || "";
-  const ep = document.getElementById("edit_priority");
-  if (ep) ep.value = t.priority || "do now";
-  const es = document.getElementById("edit_status");
-  if (es) es.value = t.status || "to do";
-  if (editTaskModal) editTaskModal.classList.remove("hidden");
-  setTimeout(() => {
-    const en2 = document.getElementById("edit_name");
-    if (en2) en2.focus();
-  }, 60);
-};
-
-if (cancelEditTaskBtn)
-  cancelEditTaskBtn.addEventListener("click", () => {
-    if (editTaskModal) editTaskModal.classList.add("hidden");
-    editingTaskId = null;
-  });
-
-if (editTaskForm) {
-  editTaskForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    if (!editingTaskId) return;
-
-    const name = document.getElementById("edit_name").value;
-    const due_date = document.getElementById("edit_due_date").value;
-    const due_time = document.getElementById("edit_due_time").value;
-    const priority = document.getElementById("edit_priority").value;
-    const status = document.getElementById("edit_status").value;
-
-    await fetch(`${API_URL}/${editingTaskId}`, {
-      method: "PATCH",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({ name, due_date, due_time, priority, status }),
+  if (cancelEditTaskBtn)
+    cancelEditTaskBtn.addEventListener("click", () => {
+      if (editTaskModal) editTaskModal.classList.add("hidden");
+      editingTaskId = null;
     });
 
-    if (editTaskModal) editTaskModal.classList.add("hidden");
-    editingTaskId = null;
-    await loadTasks();
-  });
-}
+  if (editTaskForm) {
+    editTaskForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!editingTaskId) return;
 
-// delete confirmation
-function confirmDelete(id) {
-  deleteIdPending = id;
-  if (deleteModal) deleteModal.classList.remove("hidden");
-}
+      const name = document.getElementById("edit_name").value;
+      const due_date = document.getElementById("edit_due_date").value;
+      const due_time = document.getElementById("edit_due_time").value;
+      const priority = document.getElementById("edit_priority").value;
+      const status = document.getElementById("edit_status").value;
 
-if (cancelDeleteBtn)
-  cancelDeleteBtn.addEventListener("click", () => {
-    deleteIdPending = null;
-    if (deleteModal) deleteModal.classList.add("hidden");
-  });
-
-if (confirmDeleteBtn)
-  confirmDeleteBtn.addEventListener("click", async () => {
-    if (!deleteIdPending) return;
-    const id = deleteIdPending;
-    deleteIdPending = null;
-    if (deleteModal) deleteModal.classList.add("hidden");
-
-    try {
-      const res = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
+      await fetch(`${API_URL}/${editingTaskId}`, {
+        method: "PATCH",
         headers: getAuthHeaders(),
+        body: JSON.stringify({ name, due_date, due_time, priority, status }),
       });
-      if (!res.ok) {
-        const text = await res.text();
-        alert("Delete failed: " + text);
+
+      if (editTaskModal) editTaskModal.classList.add("hidden");
+      editingTaskId = null;
+      await loadTasks();
+    });
+  }
+
+  // delete confirmation
+  function confirmDelete(id) {
+    deleteIdPending = id;
+    if (deleteModal) deleteModal.classList.remove("hidden");
+  }
+  window.confirmDelete = confirmDelete;
+
+  if (cancelDeleteBtn)
+    cancelDeleteBtn.addEventListener("click", () => {
+      deleteIdPending = null;
+      if (deleteModal) deleteModal.classList.add("hidden");
+    });
+
+  if (confirmDeleteBtn)
+    confirmDeleteBtn.addEventListener("click", async () => {
+      if (!deleteIdPending) return;
+      const id = deleteIdPending;
+      deleteIdPending = null;
+      if (deleteModal) deleteModal.classList.add("hidden");
+
+      try {
+        const res = await fetch(`${API_URL}/${id}`, {
+          method: "DELETE",
+          headers: getAuthHeaders(),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          alert("Delete failed: " + text);
+          return;
+        }
+        try {
+          lastDeletedTask = await res.json();
+        } catch (e) {
+          lastDeletedTask = null;
+        }
+        await loadTasks();
+        if (lastDeletedTask) showUndo();
+      } catch (err) {
+        alert("Delete failed: " + err.message);
+      }
+    });
+
+  // undo
+  function showUndo() {
+    if (!undoBanner) return;
+    undoBanner.style.display = "flex";
+    clearTimeout(undoTimeout);
+    undoTimeout = setTimeout(() => {
+      undoBanner.style.display = "none";
+      lastDeletedTask = null;
+    }, 2000);
+  }
+  window.showUndo = showUndo;
+
+  if (undoBtn)
+    undoBtn.addEventListener("click", async () => {
+      if (!lastDeletedTask) return;
+      try {
+        await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+        });
+      } catch (err) {
+        alert("Undo failed: " + err.message);
         return;
       }
-      try {
-        lastDeletedTask = await res.json();
-      } catch (e) {
-        lastDeletedTask = null;
-      }
+      lastDeletedTask = null;
+      if (undoBanner) undoBanner.style.display = "none";
+      clearTimeout(undoTimeout);
       await loadTasks();
-      if (lastDeletedTask) showUndo();
-    } catch (err) {
-      alert("Delete failed: " + err.message);
-    }
-  });
+    });
 
-// undo
-function showUndo() {
-  if (!undoBanner) return;
-  undoBanner.style.display = "flex";
-  clearTimeout(undoTimeout);
-  undoTimeout = setTimeout(() => {
-    undoBanner.style.display = "none";
-    lastDeletedTask = null;
-  }, 2000);
-}
+  // night mode toggle
+  if (titleToggle)
+    titleToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+    });
 
-if (undoBtn)
-  undoBtn.addEventListener("click", async () => {
-    if (!lastDeletedTask) return;
-    try {
-      await fetch(`${API_URL}/${lastDeletedTask.id}/undo`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      });
-    } catch (err) {
-      alert("Undo failed: " + err.message);
-      return;
-    }
-    lastDeletedTask = null;
-    if (undoBanner) undoBanner.style.display = "none";
-    clearTimeout(undoTimeout);
-    await loadTasks();
-  });
+  // responsive heights for kanban columns
+  function refreshHeights() {
+    const main = document.getElementById('mainContainer');
+    if (!main) return;
+    
+    // Get the topbar height
+    const topbar = document.querySelector('body > div:first-child');
+    const topbarHeight = topbar ? topbar.offsetHeight : 80;
+    
+    // Get the toolbar height
+    const toolbar = main.querySelector('[class*="border-b-2"]');
+    const toolbarHeight = toolbar ? toolbar.offsetHeight : 60;
+    
+    // Get the progress bar height
+    const progressHeight = 36;
+    
+    // Calculate available height
+    const mainTop = main.getBoundingClientRect().top;
+    const available = window.innerHeight - mainTop - toolbarHeight - progressHeight - 32; // 32px padding/margin
+    
+    // Apply to kanban scroll containers
+    document.querySelectorAll('.kanban-scroll').forEach(el => {
+      el.style.maxHeight = Math.max(200, available) + 'px';
+    });
+  }
 
-// night mode toggle
-if (titleToggle)
-  titleToggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-  });
+  // Call on load and window resize
+  window.addEventListener('resize', refreshHeights);
+  window.addEventListener('load', refreshHeights);
+  setTimeout(refreshHeights, 200);
 
-// --- Initialization ---
-loadTasks();
+  // --- Initialization ---
+  loadTasks();
+});

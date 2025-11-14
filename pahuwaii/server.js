@@ -94,14 +94,24 @@ app.get("/tasks/:id", verifyToken, (req, res) => {
 
 // create task
 app.post("/tasks", verifyToken, (req, res) => {
-  const { name, due_date, due_time, priority, status } = req.body;
+  // allow either "name" or legacy "title" from client
+  const name = req.body.name || req.body.title;
+  const { due_date, due_time, priority, status } = req.body;
+
+  if (!name) return res.status(400).json({ error: "Task name required" });
+
+  console.log("Creating task for user", req.userId, "body:", req.body);
+
   const stmt = db.prepare(
     "INSERT INTO tasks (name, due_date, due_time, priority, status, date_added, deleted_at, user_id) VALUES (?, ?, ?, ?, ?, datetime('now'), NULL, ?)"
   );
   stmt.run(
     [name, due_date, due_time, priority, status, req.userId],
     function (err) {
-      if (err) return res.status(500).json({ error: err.message });
+      if (err) {
+        console.error("Insert task error:", err.message);
+        return res.status(500).json({ error: err.message });
+      }
       res.json({ id: this.lastID, name, due_date, due_time, priority, status });
     }
   );
