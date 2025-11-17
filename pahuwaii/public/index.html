@@ -46,9 +46,16 @@
         class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
         aria-label="Open profile"
       >
-        <span class="material-symbols-outlined text-5xl cursor-pointer"
-          >account_circle</span
+        <div
+          class="w-12 h-12 rounded-full border-2 border-black overflow-hidden cursor-pointer"
         >
+          <img
+            id="headerProfilePic"
+            src="profile-icons/user-modified.png"
+            alt="Profile"
+            class="w-full h-full object-cover"
+          />
+        </div>
       </a>
     </div>
 
@@ -361,7 +368,7 @@
           <input
             type="text"
             id="memberEmails"
-            placeholder="Enter member emails, comma separated"
+            placeholder="Enter member email"
             required
             class="border p-2 rounded"
           />

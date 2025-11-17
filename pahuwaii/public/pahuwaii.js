@@ -112,6 +112,33 @@ function updateListSelection(selectedId) {
     }
   }
 }
+async function loadUserProfilePicture() {
+  const authToken = localStorage.getItem("authToken");
+
+  if (!authToken) {
+    return; // User not logged in
+  }
+
+  try {
+    const res = await fetch("/profile", {
+      method: "GET",
+      headers: {
+        Authorization: "Bearer " + authToken,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.profile_picture) {
+      const headerProfilePic = document.getElementById("headerProfilePic");
+      if (headerProfilePic) {
+        headerProfilePic.src = data.profile_picture;
+      }
+    }
+  } catch (err) {
+    console.error("Error loading profile picture:", err);
+  }
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("pahuwaii.js DOMContentLoaded fired");
@@ -120,6 +147,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "/auth.html";
     return;
   }
+
+  await loadUserProfilePicture();
 
   // Setup sidebar toggle
   const showSidebarBtn = document.getElementById("showSidebarBtn");
