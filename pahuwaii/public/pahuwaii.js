@@ -113,27 +113,43 @@ function updateListSelection(selectedId) {
   }
 }
 async function loadUserProfilePicture() {
-  const authToken = localStorage.getItem("authToken");
+  const token = localStorage.getItem("authToken");
+  if (!token) return;
 
-  if (!authToken) {
-    return; // User not logged in
+  // Try to get local persisted avatar first so UI updates instantly
+  try {
+    const decoded = JSON.parse(atob(token.split(".")[1]));
+    const uid = decoded.user_id || decoded.id;
+    if (uid) {
+      const saved = localStorage.getItem(`profilePic_${uid}`);
+      if (saved) {
+        const headerProfilePic = document.getElementById("headerProfilePic");
+        if (headerProfilePic) headerProfilePic.src = saved;
+      }
+    }
+  } catch (err) {
+    console.warn("Error decoding token for local avatar", err);
   }
 
+  // Then fetch server-side profile and overwrite/sync local copy if server has one
   try {
     const res = await fetch("/profile", {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + authToken,
+        Authorization: "Bearer " + token,
       },
     });
 
+    if (!res.ok) return;
     const data = await res.json();
-
-    if (res.ok && data.profile_picture) {
+    if (data && data.profile_picture) {
       const headerProfilePic = document.getElementById("headerProfilePic");
-      if (headerProfilePic) {
-        headerProfilePic.src = data.profile_picture;
-      }
+      if (headerProfilePic) headerProfilePic.src = data.profile_picture;
+      try {
+        const uid2 = data.id || data.user_id;
+        if (uid2)
+          localStorage.setItem(`profilePic_${uid2}`, data.profile_picture);
+      } catch (e) {}
     }
   } catch (err) {
     console.error("Error loading profile picture:", err);
@@ -481,6 +497,7 @@ function createTaskCard(task) {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("taskId", task.id);
   });
+  card.setAttribute("draggable", "true");
 
   // Checkbox handler
   const cb = card.querySelector(`#cb_${task.id}`);
@@ -934,4 +951,36 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Error adding member");
     }
   });
+});
+
+// --- Drag & Drop: allow dragging tasks between columns ---
+function allowDrop(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+}
+
+async function handleDrop(e, targetStatus) {
+  e.preventDefault();
+  const taskId =
+    e.dataTransfer.getData("taskId") || e.dataTransfer.getData("text");
+  if (!taskId) return;
+  try {
+    // updateStatus will refresh the board after calling the API
+    await updateStatus(taskId, targetStatus);
+  } catch (err) {
+    console.error("Failed to drop/update status", err);
+  }
+}
+
+const dropTargets = [
+  { id: "notStartedTasks", status: "to do" },
+  { id: "inProgressTasks", status: "in progress" },
+  { id: "doneTasks", status: "done" },
+];
+
+dropTargets.forEach((t) => {
+  const el = document.getElementById(t.id);
+  if (!el) return;
+  el.addEventListener("dragover", allowDrop);
+  el.addEventListener("drop", (e) => handleDrop(e, t.status));
 });

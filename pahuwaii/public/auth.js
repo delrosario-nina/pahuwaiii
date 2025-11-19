@@ -16,6 +16,29 @@ let currentUser = null;
 const urlParams = new URLSearchParams(window.location.search);
 const resetToken = urlParams.get("token");
 
+function validatePassword(password) {
+  const hasMinLength = password.length >= 6;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+
+  return {
+    isValid: hasMinLength && hasLetter && hasNumber,
+    errors: {
+      minLength: !hasMinLength,
+      hasLetter: !hasLetter,
+      hasNumber: !hasNumber,
+    },
+  };
+}
+
+function getPasswordErrorMessage(validation) {
+  const errors = [];
+  if (validation.errors.minLength) errors.push("at least 6 characters");
+  if (validation.errors.hasLetter) errors.push("at least one letter");
+  if (validation.errors.hasNumber) errors.push("at least one number");
+
+  return `Password must contain ${errors.join(", ")}.`;
+}
 // Initialize all DOM elements and set up event listeners
 document.addEventListener("DOMContentLoaded", () => {
   console.log("auth.js DOMContentLoaded fired");
@@ -29,6 +52,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         currentUser = data;
+
+        // persist server avatar into localStorage for this user (so other pages can read it)
+        try {
+          const uid = data.id || data.user_id;
+          if (uid && data.profile_picture) {
+            localStorage.setItem(`profilePic_${uid}`, data.profile_picture);
+          }
+        } catch (e) {
+          console.warn("persist avatar failed", e);
+        }
+
         showProfile();
       })
       .catch(() => {
@@ -224,6 +258,14 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("profilePicPreview").src = selectedAvatar;
           currentUser.profile_picture = selectedAvatar;
 
+          // persist per-user selection locally so other pages see it immediately
+          try {
+            const uid = currentUser.id || currentUser.user_id;
+            if (uid) localStorage.setItem(`profilePic_${uid}`, selectedAvatar);
+          } catch (e) {
+            console.warn("saving avatar to localStorage failed", e);
+          }
+
           // Close modal
           document.getElementById("profilePicModal").classList.add("hidden");
 
@@ -259,8 +301,30 @@ function showProfile() {
     currentUser.email || "";
   document.getElementById("profile_bio_display").textContent =
     currentUser.bio || "insert bio here";
-  document.getElementById("profilePicPreview").src =
-    currentUser.profile_picture || "user-modified.png";
+
+  // Prefer server-provided avatar; but fall back to a locally persisted avatar for this user
+  const previewEl = document.getElementById("profilePicPreview");
+  const serverAvatar = currentUser.profile_picture || null;
+
+  let chosen = serverAvatar || null;
+  try {
+    const uid = currentUser.id || currentUser.user_id;
+    if (!chosen && uid) {
+      const saved = localStorage.getItem(`profilePic_${uid}`);
+      if (saved) chosen = saved;
+    }
+    // If server has avatar, ensure localStorage matches it (sync)
+    if (serverAvatar && currentUser.id) {
+      localStorage.setItem(
+        `profilePic_${currentUser.id || currentUser.user_id}`,
+        serverAvatar
+      );
+    }
+  } catch (e) {
+    console.warn("profile avatar read/write failed", e);
+  }
+
+  if (previewEl) previewEl.src = chosen || "user-modified.png";
 }
 
 function showLogin() {
@@ -361,6 +425,12 @@ async function handleSignup(e) {
 
   if (password !== confirm_password) {
     alert("Passwords do not match");
+    return;
+  }
+
+  const validation = validatePassword(password);
+  if (!validation.isValid) {
+    alert(getPasswordErrorMessage(validation));
     return;
   }
 
@@ -491,8 +561,9 @@ async function handleChangePassword() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      alert("New password must be at least 6 characters.");
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
+      alert(getPasswordErrorMessage(validation));
       return;
     }
 
