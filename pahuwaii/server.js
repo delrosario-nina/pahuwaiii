@@ -1,20 +1,19 @@
-require("dotenv").config(); //to use env variables for the nodemailer
+require("dotenv").config();
 
-//imports
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
 const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken"); //securely transmitting information between parties as a JSON object
-const JWT_SECRET = "supersecret"; //
-const nodemailer = require("nodemailer"); //send emails from a server-side application
+const jwt = require("jsonwebtoken");
+const JWT_SECRET = "supersecret";
+const nodemailer = require("nodemailer");
 
 const app = express();
-app.use(cors()); //cors is needed for local testing with live server extension
-app.use(express.json()); // for parsing application/json
+app.use(cors());
+app.use(express.json());
 
-//create a database
+// Create database
 const db = new sqlite3.Database("todo.db", (err) => {
   if (err) {
     console.error("Failed to open DB:", err.message);
@@ -24,6 +23,8 @@ const db = new sqlite3.Database("todo.db", (err) => {
 
 db.serialize(() => {
   db.run("PRAGMA foreign_keys = ON;");
+
+  // Users table
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,11 +32,45 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       bio TEXT NOT NULL DEFAULT 'insert bio here',
+      profile_picture TEXT DEFAULT 'avatar1.png',
       reset_token TEXT,
       reset_token_expiry INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  // COMBINED COLLABORATIVE LISTS TABLE
+  // member_ids stores JSON array of user IDs: [1, 2, 3]
+  db.run(`
+    CREATE TABLE IF NOT EXISTS collab_lists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      owner_id INTEGER NOT NULL,
+      member_ids TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // COLLABORATIVE TASKS TABLE
+  db.run(`
+    CREATE TABLE IF NOT EXISTS collab_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      due_date TEXT,
+      due_time TEXT,
+      priority TEXT,
+      status TEXT,
+      date_added TEXT DEFAULT (datetime('now')),
+      deleted_at TEXT,
+      list_id INTEGER NOT NULL,
+      created_by INTEGER,
+      FOREIGN KEY (list_id) REFERENCES collab_lists(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  // PERSONAL TASKS TABLE
   db.run(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,10 +81,30 @@ db.serialize(() => {
       status TEXT,
       date_added TEXT DEFAULT (datetime('now')),
       deleted_at TEXT,
-      user_id INTEGER
+      user_id INTEGER NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 });
+
+// ========== HELPER FUNCTIONS ==========
+function addMemberToList(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  if (!members.includes(userId)) {
+    members.push(userId);
+  }
+  return JSON.stringify(members);
+}
+
+function removeMemberFromList(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  return JSON.stringify(members.filter((id) => id !== userId));
+}
+
+function isMember(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  return members.includes(userId);
+}
 
 // ========== JWT MIDDLEWARE ==========
 function verifyToken(req, res, next) {
@@ -65,9 +120,7 @@ function verifyToken(req, res, next) {
   }
 }
 
-// ========== API ==========
-
-// get all active tasks (deleted_at IS NULL)
+// ========== PERSONAL TASKS API ==========
 app.get("/tasks", verifyToken, (req, res) => {
   db.all(
     "SELECT * FROM tasks WHERE deleted_at IS NULL AND user_id = ?",
@@ -79,7 +132,6 @@ app.get("/tasks", verifyToken, (req, res) => {
   );
 });
 
-// get single task
 app.get("/tasks/:id", verifyToken, (req, res) => {
   db.get(
     "SELECT * FROM tasks WHERE id = ? AND user_id = ?",
@@ -92,23 +144,31 @@ app.get("/tasks/:id", verifyToken, (req, res) => {
   );
 });
 
-// create task
 app.post("/tasks", verifyToken, (req, res) => {
-  const { name, due_date, due_time, priority, status } = req.body;
+  const name = req.body.name || req.body.title;
+  const { due_date, due_time, priority, status } = req.body;
+  if (!name) return res.status(400).json({ error: "Task name required" });
+
   const stmt = db.prepare(
     "INSERT INTO tasks (name, due_date, due_time, priority, status, date_added, deleted_at, user_id) VALUES (?, ?, ?, ?, ?, datetime('now'), NULL, ?)"
   );
   stmt.run(
-    [name, due_date, due_time, priority, status, req.userId],
+    [name, due_date, due_time, priority, status || "to do", req.userId],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ id: this.lastID, name, due_date, due_time, priority, status });
+      res.json({
+        id: this.lastID,
+        name,
+        due_date,
+        due_time,
+        priority,
+        status: status || "to do",
+      });
     }
   );
   stmt.finalize();
 });
 
-// update task
 app.patch("/tasks/:id", verifyToken, (req, res) => {
   const { id } = req.params;
   const updates = req.body;
@@ -128,7 +188,6 @@ app.patch("/tasks/:id", verifyToken, (req, res) => {
   );
 });
 
-// soft delete a task and return the deleted row
 app.delete("/tasks/:id", verifyToken, (req, res) => {
   const { id } = req.params;
   db.get(
@@ -137,14 +196,12 @@ app.delete("/tasks/:id", verifyToken, (req, res) => {
     (err, task) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!task) return res.status(404).json({ error: "Task not found" });
-
       db.run(
         "UPDATE tasks SET deleted_at = datetime('now') WHERE id = ?",
         [id],
         function (deleteErr) {
           if (deleteErr)
             return res.status(500).json({ error: deleteErr.message });
-          // return the original row for frontend undo
           res.json(task);
         }
       );
@@ -152,7 +209,6 @@ app.delete("/tasks/:id", verifyToken, (req, res) => {
   );
 });
 
-// undo delete
 app.post("/tasks/:id/undo", verifyToken, (req, res) => {
   const { id } = req.params;
   db.run(
@@ -165,82 +221,340 @@ app.post("/tasks/:id/undo", verifyToken, (req, res) => {
   );
 });
 
-//for debugging (ma-show sa console)
-app.post("/debug", (req, res) => {
-  console.log("DEBUG POST body:", req.body);
-  res.json({ received: req.body });
+// ========== COLLABORATIVE LISTS API ==========
+
+// Get all collab lists user owns or is a member of
+app.get("/collab-lists", verifyToken, (req, res) => {
+  db.all(
+    `SELECT cl.*, u.name as owner_name
+     FROM collab_lists cl
+     LEFT JOIN users u ON cl.owner_id = u.id
+     WHERE cl.owner_id = ? OR json_array_contains(cl.member_ids, ?)
+     ORDER BY cl.created_at DESC`,
+    [req.userId, req.userId],
+    (err, rows) => {
+      if (err) {
+        // Fallback if json_array_contains doesn't exist
+        db.all(
+          `SELECT cl.*, u.name as owner_name
+           FROM collab_lists cl
+           LEFT JOIN users u ON cl.owner_id = u.id
+           ORDER BY cl.created_at DESC`,
+          [],
+          (err2, allRows) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            const filtered = allRows.filter(
+              (row) =>
+                row.owner_id === req.userId ||
+                isMember(row.member_ids, req.userId)
+            );
+            res.json(filtered);
+          }
+        );
+      } else {
+        res.json(rows);
+      }
+    }
+  );
 });
 
-//
-//No need to anything before this code nina >:(
-//
+// Create a new collaborative list
+app.post("/collab-lists", verifyToken, (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "List name required" });
 
-//For signup (error checking bcoz its a bitch)
+  // Initialize with owner as first member
+  const initialMembers = JSON.stringify([req.userId]);
+
+  db.run(
+    "INSERT INTO collab_lists (name, owner_id, member_ids) VALUES (?, ?, ?)",
+    [name, req.userId, initialMembers],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({
+        id: this.lastID,
+        name,
+        owner_id: req.userId,
+        member_ids: initialMembers,
+      });
+    }
+  );
+});
+
+// Get members of a collaborative list
+app.get("/collab-lists/:id/members", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get(
+    `SELECT member_ids FROM collab_lists WHERE id = ?`,
+    [id],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list) return res.status(404).json({ error: "List not found" });
+
+      const memberIds = JSON.parse(list.member_ids);
+      if (memberIds.length === 0) return res.json([]);
+
+      const placeholders = memberIds.map(() => "?").join(",");
+      db.all(
+        `SELECT id, name, email, profile_picture, created_at as joined_at
+         FROM users
+         WHERE id IN (${placeholders})
+         ORDER BY id ASC`,
+        memberIds,
+        (err, users) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(users);
+        }
+      );
+    }
+  );
+});
+
+// Add member to collaborative list
+app.post("/collab-lists/:id/members", verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+
+  // Check if requester owns the list
+  db.get(
+    "SELECT * FROM collab_lists WHERE id = ? AND owner_id = ?",
+    [id, req.userId],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list)
+        return res.status(403).json({ error: "Only owner can add members" });
+
+      // Find user by email
+      db.get("SELECT id FROM users WHERE email = ?", [email], (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Check if already a member
+        if (isMember(list.member_ids, user.id)) {
+          return res.status(400).json({ error: "User already a member" });
+        }
+
+        // Add member to array
+        const updatedMembers = addMemberToList(list.member_ids, user.id);
+
+        db.run(
+          "UPDATE collab_lists SET member_ids = ? WHERE id = ?",
+          [updatedMembers, id],
+          function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, member_ids: updatedMembers });
+          }
+        );
+      });
+    }
+  );
+});
+
+// Remove member from collaborative list
+app.delete("/collab-lists/:id/members/:userId", verifyToken, (req, res) => {
+  const { id, userId } = req.params;
+  const userIdNum = parseInt(userId, 10);
+
+  // Check if requester owns the list
+  db.get(
+    "SELECT * FROM collab_lists WHERE id = ? AND owner_id = ?",
+    [id, req.userId],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list)
+        return res.status(403).json({ error: "Only owner can remove members" });
+
+      // Can't remove owner
+      if (userIdNum === list.owner_id) {
+        return res.status(400).json({ error: "Cannot remove owner from list" });
+      }
+
+      // Remove member from array
+      const updatedMembers = removeMemberFromList(list.member_ids, userIdNum);
+
+      db.run(
+        "UPDATE collab_lists SET member_ids = ? WHERE id = ?",
+        [updatedMembers, id],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ success: true, member_ids: updatedMembers });
+        }
+      );
+    }
+  );
+});
+
+// Get tasks for a collaborative list
+app.get("/collab-lists/:id/tasks", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Verify user is a member
+  db.get(
+    "SELECT member_ids FROM collab_lists WHERE id = ?",
+    [id],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list) return res.status(404).json({ error: "List not found" });
+      if (!isMember(list.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not a member" });
+      }
+
+      db.all(
+        "SELECT * FROM collab_tasks WHERE list_id = ? AND deleted_at IS NULL ORDER BY date_added ASC",
+        [id],
+        (err, rows) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(rows);
+        }
+      );
+    }
+  );
+});
+
+// Create task in collaborative list
+app.post("/collab-lists/:id/tasks", verifyToken, (req, res) => {
+  const { id } = req.params;
+  const name = req.body.name || req.body.title;
+  const { due_date, due_time, priority, status } = req.body;
+
+  if (!name) return res.status(400).json({ error: "Task name required" });
+
+  // Verify user is a member
+  db.get(
+    "SELECT member_ids FROM collab_lists WHERE id = ?",
+    [id],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list) return res.status(404).json({ error: "List not found" });
+      if (!isMember(list.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not a member" });
+      }
+
+      db.run(
+        "INSERT INTO collab_tasks (name, due_date, due_time, priority, status, list_id, created_by, date_added) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
+        [name, due_date, due_time, priority, status || "to do", id, req.userId],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({
+            id: this.lastID,
+            name,
+            due_date,
+            due_time,
+            priority,
+            status: status || "to do",
+            list_id: id,
+          });
+        }
+      );
+    }
+  );
+});
+
+// Update collaborative task
+app.patch("/collab-tasks/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  // Verify user is a member of the list
+  db.get(
+    `SELECT ct.*, cl.member_ids 
+     FROM collab_tasks ct
+     JOIN collab_lists cl ON ct.list_id = cl.id
+     WHERE ct.id = ?`,
+    [id],
+    (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      if (!isMember(task.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      const fields = Object.keys(updates)
+        .map((k) => `${k} = ?`)
+        .join(", ");
+      const values = Object.values(updates);
+
+      db.run(
+        `UPDATE collab_tasks SET ${fields} WHERE id = ?`,
+        [...values, id],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ updated: this.changes });
+        }
+      );
+    }
+  );
+});
+
+// Delete collaborative task
+app.delete("/collab-tasks/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Verify user is a member
+  db.get(
+    `SELECT ct.*, cl.member_ids 
+     FROM collab_tasks ct
+     JOIN collab_lists cl ON ct.list_id = cl.id
+     WHERE ct.id = ?`,
+    [id],
+    (err, task) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      if (!isMember(task.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
+
+      db.run(
+        "UPDATE collab_tasks SET deleted_at = datetime('now') WHERE id = ?",
+        [id],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(task);
+        }
+      );
+    }
+  );
+});
+
+// ========== USER AUTHENTICATION ==========
+
 app.post("/signup", (req, res) => {
   const { name, email, password } = req.body;
-  console.log("Signup request:", req.body);
-
   if (!name || !email || !password) {
-    console.log("Missing fields");
     return res.status(400).json({ error: "Missing fields" });
   }
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-    if (err) {
-      console.error("DB error:", err);
-      return res.status(500).json({ error: err.message });
-    }
-    if (user) {
-      console.log("Email already exists:", email);
-      return res.status(409).json({ error: "Email already in use" });
-    }
+    if (err) return res.status(500).json({ error: err.message });
+    if (user) return res.status(409).json({ error: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
-    console.log("Hashed password:", hashed);
-
     db.run(
       "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
       [name, email, hashed],
       function (insertErr) {
-        if (insertErr) {
-          console.error("Insert error:", insertErr);
+        if (insertErr)
           return res.status(500).json({ error: insertErr.message });
-        }
-        console.log("User inserted successfully:", name);
         res.json({ id: this.lastID, name, email });
       }
     );
   });
 });
 
-// For login
 app.post("/login", (req, res) => {
   const { name, password } = req.body;
-
   if (!name || !password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
 
   db.get("SELECT * FROM users WHERE name = ?", [name], async (err, user) => {
-    if (err) {
-      console.error("Database error:", err);
-      return res
-        .status(500)
-        .json({ error: "Server error, please try again later" });
-    }
+    if (err) return res.status(500).json({ error: "Server error" });
+    if (!user) return res.status(404).json({ error: "No such account found" });
 
-    // If no user found with the given name
-    if (!user) {
-      return res.status(404).json({ error: "No such account found" });
-    }
-
-    // Compare password with hashed password
     const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(401).json({ error: "Incorrect password" });
-    }
+    if (!match) return res.status(401).json({ error: "Incorrect password" });
 
-    // if everything is correct, issue a JWT token
     const token = jwt.sign({ user_id: user.id }, JWT_SECRET, {
       expiresIn: "1d",
     });
@@ -251,25 +565,15 @@ app.post("/login", (req, res) => {
       name: user.name,
       email: user.email,
       bio: user.bio,
+      profile_picture: user.profile_picture,
     });
   });
 });
 
-//Getting data to display for the profile
-app.get("/profile", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Missing token" });
-  const token = authHeader.split(" ")[1];
-  let userId;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    userId = decoded.user_id;
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
+app.get("/profile", verifyToken, (req, res) => {
   db.get(
-    "SELECT name, email, bio FROM users WHERE id = ?",
-    [userId],
+    "SELECT name, email, bio, profile_picture FROM users WHERE id = ?",
+    [req.userId],
     (err, user) => {
       if (err || !user)
         return res.status(404).json({ error: "User not found" });
@@ -278,25 +582,11 @@ app.get("/profile", (req, res) => {
   );
 });
 
-// Editing the profile
-app.patch("/profile", (req, res) => {
-  console.log("Incoming body:", req.body);
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Missing token" });
-  const token = authHeader.split(" ")[1];
-  let userId;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    userId = decoded.user_id;
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  const { name, email, bio } = req.body;
-  console.log("Incoming body:", req.body);
-
+app.patch("/profile", verifyToken, (req, res) => {
+  const { name, email, bio, profile_picture } = req.body;
   let fields = [];
   let values = [];
+
   if (name !== undefined) {
     fields.push("name = ?");
     values.push(name);
@@ -309,11 +599,15 @@ app.patch("/profile", (req, res) => {
     fields.push("bio = ?");
     values.push(bio);
   }
+  if (profile_picture !== undefined) {
+    fields.push("profile_picture = ?");
+    values.push(profile_picture);
+  }
 
   if (!fields.length)
     return res.status(400).json({ error: "No fields to update" });
 
-  values.push(userId);
+  values.push(req.userId);
   db.run(
     `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
     values,
@@ -324,28 +618,15 @@ app.patch("/profile", (req, res) => {
   );
 });
 
-app.patch("/profile/password", (req, res) => {
-  console.log("Incoming body:", req.body);
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Missing token" });
-
-  const token = authHeader.split(" ")[1];
-  let userId;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    userId = decoded.user_id;
-  } catch {
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
+app.patch("/profile/password", verifyToken, (req, res) => {
   const { oldPassword, newPassword } = req.body;
-
-  if (!oldPassword || !newPassword)
+  if (!oldPassword || !newPassword) {
     return res.status(400).json({ error: "Missing old or new password" });
+  }
 
   db.get(
     "SELECT password FROM users WHERE id = ?",
-    [userId],
+    [req.userId],
     async (err, user) => {
       if (err || !user)
         return res.status(500).json({ error: "User not found" });
@@ -357,7 +638,7 @@ app.patch("/profile/password", (req, res) => {
       const hashed = await bcrypt.hash(newPassword, 10);
       db.run(
         "UPDATE users SET password = ? WHERE id = ?",
-        [hashed, userId],
+        [hashed, req.userId],
         function (err) {
           if (err) return res.status(500).json({ error: err.message });
           res.json({ message: "Password updated successfully" });
@@ -367,14 +648,17 @@ app.patch("/profile/password", (req, res) => {
   );
 });
 
-// Request password reset
+// Password reset endpoints
 app.post("/request-reset", (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Missing email" });
+
   db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
     if (err || !user) return res.status(404).json({ error: "User not found" });
+
     const token = require("crypto").randomBytes(32).toString("hex");
-    const expiry = Date.now() + 1000 * 60 * 15; // 15 minutes
+    const expiry = Date.now() + 1000 * 60 * 15;
+
     db.run(
       "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
       [token, expiry, email]
@@ -387,38 +671,34 @@ app.post("/request-reset", (req, res) => {
         pass: process.env.EMAIL_APP_PASSWORD,
       },
     });
+
     const mailOptions = {
       from: "ninacloudia29@gmail.com",
       to: email,
       subject: "Pahuwaii Password Reset",
-      text: `Click this link to reset your password: http://localhost:3000/auth.html?token=${token}
-             This link is valid for 15 minutes and can only be used once.
-             Please don't share this code with anyone: we'll never ask for it on the phone or via email.
-             
-             Thanks,
-             The Pahuwaii :3 Team`,
+      text: `Click this link to reset your password: http://localhost:3000/auth.html?token=${token}`,
     };
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error(error);
-        return res.status(500).json({ error: "Failed to send email" });
-      }
+
+    transporter.sendMail(mailOptions, (error) => {
+      if (error) return res.status(500).json({ error: "Failed to send email" });
       res.json({ success: true, message: "Reset link sent to email" });
     });
   });
 });
 
-// Reset password
 app.post("/reset-password", async (req, res) => {
   const { token, new_password } = req.body;
   if (!token || !new_password)
     return res.status(400).json({ error: "Missing fields" });
+
   db.get(
     "SELECT * FROM users WHERE reset_token = ?",
     [token],
     async (err, user) => {
-      if (err || !user || user.reset_token_expiry < Date.now())
+      if (err || !user || user.reset_token_expiry < Date.now()) {
         return res.status(400).json({ error: "Invalid or expired token" });
+      }
+
       const hashed = await bcrypt.hash(new_password, 10);
       db.run(
         "UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?",
@@ -429,43 +709,23 @@ app.post("/reset-password", async (req, res) => {
   );
 });
 
-app.delete("/delete-account", (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: "Missing token" });
-
-  const token = authHeader.split(" ")[1];
-  let userId;
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    userId = decoded.user_id;
-  } catch (err) {
-    console.error("Invalid token:", err.message);
-    return res.status(401).json({ error: "Invalid token" });
-  }
-
-  console.log("Deleting user ID:", userId);
-
-  db.run("DELETE FROM users WHERE id = ?", [userId], function (err) {
-    if (err) {
-      console.error("DB error:", err.message);
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+app.delete("/delete-account", verifyToken, (req, res) => {
+  db.run("DELETE FROM users WHERE id = ?", [req.userId], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    if (this.changes === 0)
       return res.status(404).json({ error: "User not found" });
-    }
     res.json({ success: true, deleted: this.changes });
   });
 });
 
-// serve static frontend from "public" folder   PUTANGINA NITONG LINE NA TO ANG LAKI LAKI NG PROBLEMA KO ITO LANG PALA MAY SALA
+app.post("/debug", (req, res) => {
+  console.log("DEBUG POST body:", req.body);
+  res.json({ received: req.body });
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
-// fallback to serve index.html for any other route to ensure it stays a single page
-// Start server on PORT env or 3000 by default
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server running!`);
-  console.log(`Login/Signup: http://localhost:${PORT}/auth.html`);
-  console.log(`To-Do List:   http://localhost:${PORT}/index.html`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });

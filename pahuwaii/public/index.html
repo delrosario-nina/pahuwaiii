@@ -22,86 +22,165 @@
     <link rel="stylesheet" href="pahuwaii.css" />
   </head>
 
-  <body class="min-h-screen flex flex-col items-center p-8">
-    <div class="w-[4%]">
-      <button id="NavbarBtn" title="Navigation Hamburger">
-        <span class="material-symbols-outlined" style="font-size: 48px">
-          lunch_dining
-        </span>
+  <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+    <!-- topbar -->
+    <div class="w-full max-w-7xl flex items-center gap-4 mb-6">
+      <button
+        id="showSidebarBtn"
+        class="flex items-center justify-center text-black font-bold rounded-full w-10 h-10 text-3xl hover:bg-gray-100 transition-colors"
+        title="Show Sidebar"
+      >
+        <span class="material-symbols-outlined text-4xl"> lunch_dining </span>
       </button>
-    </div>
-    <div class="flex justify-between items-center w-[96%] max-w-7xl mb-6">
-      <!-- toggle for nightmode -->
+
       <h1
         id="titleToggle"
-        class="text-5xl kanban-title tracking-wide font-bold text-center"
+        class="text-xl md:text-4xl kanban-title tracking-wide font-bold flex-1"
       >
         pahuwaii : 3
       </h1>
 
-      <!-- for the user's profile -->
-      <button id="showViewBtn" title="View Profile">
-        <span class="material-symbols-outlined" style="font-size: 48px"
-          >account_circle</span
+      <a
+        href="/auth.html"
+        title="View Profile"
+        class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+        aria-label="Open profile"
+      >
+        <div
+          class="w-12 h-12 rounded-full border-2 border-black overflow-hidden cursor-pointer"
         >
-      </button>
+          <img
+            id="headerProfilePic"
+            src="profile-icons/user-modified.png"
+            alt="Profile"
+            class="w-full h-full object-cover"
+          />
+        </div>
+      </a>
     </div>
+
+    <aside
+      id="sidebar"
+      class="fixed top-0 left-0 h-full w-80 bg-white border-r-2 border-black transform -translate-x-full transition-transform duration-300 z-40 flex flex-col"
+    >
+      <div
+        class="p-4 border-b-2 border-black flex items-center justify-between"
+      >
+        <h2 class="text-2xl font-bold">pahuwaii :3</h2>
+        <button id="closeSidebarBtn" class="text-2xl hover:text-gray-600">
+          <span class="material-symbols-outlined text-red-700">
+            close_small
+          </span>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4">
+        <!-- My List -->
+        <div class="mb-4">
+          <button
+            id="myListBtn"
+            class="w-full text-left px-4 py-2 bg-white hover:bg-blue-200 border border-gray-600 rounded mb-2"
+          >
+            My Personal List
+          </button>
+        </div>
+
+        <h3 class="font-bold mb-2">My Collaborative Lists</h3>
+        <div id="collabListsContainer">
+          <!-- Collaborative lists will be rendered here -->
+        </div>
+
+        <button
+          id="createListBtn"
+          class="mt-4 w-full px-4 py-2 bg-[#B5D6B2] text-black border border-black rounded hover:bg-green-600"
+        >
+          + Create New List
+        </button>
+      </div>
+    </aside>
+
+    <!-- Overlay -->
+    <div
+      id="sidebarOverlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+    ></div>
 
     <!-- MAIN CONTAINER -->
     <div
-      class="bg-white shadow-2xl w-[96%] max-w-7xl flex flex-col border-2 border-black flex-grow rounded"
-      style="min-height: 0"
+      id="mainContainer"
+      class="bg-white shadow-2xl w-full max-w-7xl flex flex-col border-2 border-black rounded flex-grow overflow-hidden"
+      style="min-height: calc(100vh - 220px)"
     >
-      <!-- add task + sort by dropdown -->
+      <!-- top toolbar: add icon at left, sort on right -->
       <div
-        class="flex justify-between items-center px-6 py-3 border-b-2 border-black"
+        class="flex items-center justify-between px-4 md:px-6 py-3 border-b-2 border-black"
       >
-        <button
-          id="showFormBtn"
-          class="flex items-center justify-center text-black font-bold transition rounded-full w-10 h-10 text-3xl"
-          title="Add Task"
-        >
-          <span class="material-symbols-outlined" style="font-size: 32px"
-            >add_circle</span
+        <div class="flex items-center gap-3">
+          <button
+            id="showFormBtn"
+            class="flex items-center justify-center text-black font-bold rounded-full w-10 h-10 text-3xl hover:bg-gray-100 transition-colors"
+            title="Add Task"
           >
-        </button>
-        <select
-          id="sortBy"
-          class="border-2 border-black px-3 py-2 text-sm rounded"
-        >
-          <option value="date_added">Date Added</option>
-          <option value="due_date">Due Date</option>
-          <option value="priority">Priority</option>
-        </select>
+            <span class="material-symbols-outlined" style="font-size: 28px"
+              >add_circle</span
+            >
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <select
+            id="sortBy"
+            class="border-2 border-black px-3 py-2 text-sm rounded hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <option value="date_added">Date Added</option>
+            <option value="due_date">Due Date</option>
+            <option value="priority">Priority</option>
+          </select>
+        </div>
       </div>
 
-      <!-- KANBAN COLUMNS -->
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 p-6 min-h-0">
-        <!-- to do column -->
-        <div
-          class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">To Do</h2>
-          <div id="notStartedTasks" class="kanban-scroll pr-2"></div>
+      <!-- KANBAN COLUMNS: responsive, each column scrolls -->
+      <div
+        class="flex flex-col md:flex-row gap-4 flex-1 p-4 md:p-6 min-h-0 overflow-auto md:overflow-visible"
+      >
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div
+            class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">
+              To Do
+            </h2>
+            <div
+              id="notStartedTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
+          </div>
         </div>
 
-        <!-- in progress column -->
-        <div
-          class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">
-            In Progress
-          </h2>
-          <div id="inProgressTasks" class="kanban-scroll pr-2"></div>
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div
+            class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">
+              In Progress
+            </h2>
+            <div
+              id="inProgressTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
+          </div>
         </div>
 
-        <!-- done column -->
-        <div
-          class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col shadow-inner min-h-[400px] rounded w-full md:w-[28vw]"
-        >
-          <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
-          <div id="doneTasks" class="kanban-scroll pr-2"></div>
+        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+          <div
+            class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+          >
+            <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
+            <div
+              id="doneTasks"
+              class="kanban-scroll flex-1 pr-2 overflow-y-auto"
+            ></div>
+          </div>
         </div>
       </div>
 
@@ -243,100 +322,78 @@
       </button>
     </div>
 
-    <!-- js script -->
-    <script src="pahuwaii.js"></script>
-
-    <!-- PROFILE MODAL (opened from account icon) -->
+    <!-- CREATE COLLABORATIVE LIST MODAL -->
     <div
-      id="profileCard"
-      class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      id="createListModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded"
     >
-      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl">
-        <button
-          id="closeProfileBtn"
-          class="float-right px-3 py-1 bg-gray-200 rounded"
-        >
-          Close
-        </button>
-        <h2 class="text-2xl font-bold mb-4">
-          <span id="profile_name_display_header"></span>'s Profile
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Create New Collaborative List
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p>
-              <strong>Name:</strong> <span id="profile_name_display"></span>
-            </p>
-            <p>
-              <strong>Email:</strong> <span id="profile_email_display"></span>
-            </p>
-            <p>
-              <strong>Bio:</strong>
-              <span id="profile_bio_display">insert bio here</span>
-            </p>
-          </div>
-          <div>
+        <form id="createListForm" class="grid grid-cols-1 gap-3">
+          <input
+            type="text"
+            id="newListName"
+            placeholder="List name"
+            required
+            class="border p-2 rounded"
+          />
+          <div class="flex justify-end gap-2 mt-4">
             <button
-              id="profileSignOut"
-              class="mt-2 px-4 py-2 bg-red-500 text-white rounded"
+              type="button"
+              id="cancelCreateListBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
             >
-              Sign Out
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
+            >
+              Create
             </button>
           </div>
-        </div>
+        </form>
+      </div>
+    </div>
+    <!-- ADD MEMBERS MODAL -->
+    <div
+      id="addMembersModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded"
+    >
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Add Members to Collaborative List
+        </h2>
+        <form id="addMembersForm" class="grid grid-cols-1 gap-3">
+          <input
+            type="text"
+            id="memberEmails"
+            placeholder="Enter member email"
+            required
+            class="border p-2 rounded"
+          />
+          <div class="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              id="cancelAddMembersBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
+            >
+              Add Members
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
-    <script>
-      (function () {
-        const profileCard = document.getElementById("profileCard");
-        const showViewBtn = document.getElementById("showViewBtn");
-        const closeBtn = document.getElementById("closeProfileBtn");
-        const signOutBtn = document.getElementById("profileSignOut");
-
-        async function openProfile() {
-          const token = localStorage.getItem("authToken");
-          if (!token) {
-            window.location = "/auth.html";
-            return;
-          }
-          try {
-            const res = await fetch("/profile", {
-              headers: { Authorization: "Bearer " + token },
-            });
-            if (!res.ok) {
-              localStorage.removeItem("authToken");
-              window.location = "/auth.html";
-              return;
-            }
-            const data = await res.json();
-            document.getElementById("profile_name_display").textContent =
-              data.name || "";
-            document.getElementById("profile_email_display").textContent =
-              data.email || "";
-            document.getElementById("profile_bio_display").textContent =
-              data.bio || "";
-            document.getElementById("profile_name_display_header").textContent =
-              data.name || "";
-            profileCard.classList.remove("hidden");
-          } catch (err) {
-            console.error("Failed to load profile", err);
-            localStorage.removeItem("authToken");
-            window.location = "/auth.html";
-          }
-        }
-
-        if (showViewBtn) showViewBtn.addEventListener("click", openProfile);
-        if (closeBtn)
-          closeBtn.addEventListener("click", () =>
-            profileCard.classList.add("hidden")
-          );
-        if (signOutBtn)
-          signOutBtn.addEventListener("click", () => {
-            localStorage.removeItem("authToken");
-            profileCard.classList.add("hidden");
-            window.location = "/auth.html";
-          });
-      })();
-    </script>
+    <!-- js script -->
+    <script src="pahuwaii.js"></script>
   </body>
 </html>

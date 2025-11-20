@@ -16,6 +16,29 @@ let currentUser = null;
 const urlParams = new URLSearchParams(window.location.search);
 const resetToken = urlParams.get("token");
 
+function validatePassword(password) {
+  const hasMinLength = password.length >= 6;
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+
+  return {
+    isValid: hasMinLength && hasLetter && hasNumber,
+    errors: {
+      minLength: !hasMinLength,
+      hasLetter: !hasLetter,
+      hasNumber: !hasNumber,
+    },
+  };
+}
+
+function getPasswordErrorMessage(validation) {
+  const errors = [];
+  if (validation.errors.minLength) errors.push("at least 6 characters");
+  if (validation.errors.hasLetter) errors.push("at least one letter");
+  if (validation.errors.hasNumber) errors.push("at least one number");
+
+  return `Password must contain ${errors.join(", ")}.`;
+}
 // Initialize all DOM elements and set up event listeners
 document.addEventListener("DOMContentLoaded", () => {
   console.log("auth.js DOMContentLoaded fired");
@@ -29,6 +52,17 @@ document.addEventListener("DOMContentLoaded", () => {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
         currentUser = data;
+
+        // persist server avatar into localStorage for this user (so other pages can read it)
+        try {
+          const uid = data.id || data.user_id;
+          if (uid && data.profile_picture) {
+            localStorage.setItem(`profilePic_${uid}`, data.profile_picture);
+          }
+        } catch (e) {
+          console.warn("persist avatar failed", e);
+        }
+
         showProfile();
       })
       .catch(() => {
@@ -184,7 +218,114 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     localStorage.setItem("catMode", catMode);
   });
+  document
+    .getElementById("changeProfilePicBtn")
+    .addEventListener("click", () => {
+      document.getElementById("profilePicModal").classList.remove("hidden");
+    });
+
+  document
+    .getElementById("closeProfilePicModal")
+    .addEventListener("click", () => {
+      document.getElementById("profilePicModal").classList.add("hidden");
+    });
+
+  // Setup avatar selection
+  const avatars = document.querySelectorAll(".avatar-option");
+  avatars.forEach((avatar) => {
+    avatar.addEventListener("click", async () => {
+      const selectedAvatar = avatar.getAttribute("data-avatar");
+
+      if (!selectedAvatar) {
+        console.error("No avatar selected");
+        return;
+      }
+
+      try {
+        const res = await fetch("/profile", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + authToken,
+          },
+          body: JSON.stringify({ profile_picture: selectedAvatar }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          // Update preview image
+          document.getElementById("profilePicPreview").src = selectedAvatar;
+          currentUser.profile_picture = selectedAvatar;
+
+          // persist per-user selection locally so other pages see it immediately
+          try {
+            const uid = currentUser.id || currentUser.user_id;
+            if (uid) localStorage.setItem(`profilePic_${uid}`, selectedAvatar);
+          } catch (e) {
+            console.warn("saving avatar to localStorage failed", e);
+          }
+
+          // Close modal
+          document.getElementById("profilePicModal").classList.add("hidden");
+
+          // Show success toast
+          const updateProfileToast =
+            document.getElementById("updateProfileToast");
+          updateProfileToast.classList.remove("hidden");
+          setTimeout(() => {
+            updateProfileToast.classList.add("hidden");
+          }, 1500);
+        } else {
+          alert(data.error || "Failed to update profile picture");
+        }
+      } catch (err) {
+        console.error("Error updating profile picture:", err);
+        alert("Error updating profile picture");
+      }
+    });
+  });
 });
+
+// Update showProfile function to include profile picture
+function showProfile() {
+  authModal.classList.add("hidden");
+  landing.classList.add("hidden");
+  profileCard.classList.remove("hidden");
+
+  document.getElementById("profile_name_display_header").textContent =
+    currentUser.name || "";
+  document.getElementById("profile_name_display").textContent =
+    currentUser.name || "";
+  document.getElementById("profile_email_display").textContent =
+    currentUser.email || "";
+  document.getElementById("profile_bio_display").textContent =
+    currentUser.bio || "insert bio here";
+
+  // Prefer server-provided avatar; but fall back to a locally persisted avatar for this user
+  const previewEl = document.getElementById("profilePicPreview");
+  const serverAvatar = currentUser.profile_picture || null;
+
+  let chosen = serverAvatar || null;
+  try {
+    const uid = currentUser.id || currentUser.user_id;
+    if (!chosen && uid) {
+      const saved = localStorage.getItem(`profilePic_${uid}`);
+      if (saved) chosen = saved;
+    }
+    // If server has avatar, ensure localStorage matches it (sync)
+    if (serverAvatar && currentUser.id) {
+      localStorage.setItem(
+        `profilePic_${currentUser.id || currentUser.user_id}`,
+        serverAvatar
+      );
+    }
+  } catch (e) {
+    console.warn("profile avatar read/write failed", e);
+  }
+
+  if (previewEl) previewEl.src = chosen || "user-modified.png";
+}
 
 function showLogin() {
   loginForm.classList.remove("hidden");
@@ -284,6 +425,12 @@ async function handleSignup(e) {
 
   if (password !== confirm_password) {
     alert("Passwords do not match");
+    return;
+  }
+
+  const validation = validatePassword(password);
+  if (!validation.isValid) {
+    alert(getPasswordErrorMessage(validation));
     return;
   }
 
@@ -414,8 +561,9 @@ async function handleChangePassword() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      alert("New password must be at least 6 characters.");
+    const validation = validatePassword(newPassword);
+    if (!validation.isValid) {
+      alert(getPasswordErrorMessage(validation));
       return;
     }
 
