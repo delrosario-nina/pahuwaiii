@@ -39,31 +39,20 @@ db.serialize(() => {
     )
   `);
 
-  // COLLABORATIVE LISTS TABLE
+  // COMBINED COLLABORATIVE LISTS TABLE
+  // member_ids stores JSON array of user IDs: [1, 2, 3]
   db.run(`
     CREATE TABLE IF NOT EXISTS collab_lists (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       owner_id INTEGER NOT NULL,
+      member_ids TEXT NOT NULL DEFAULT '[]',
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
-  // COLLABORATIVE MEMBERSHIP TABLE (fixed name)
-  db.run(`
-    CREATE TABLE IF NOT EXISTS collab_members (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      list_id INTEGER NOT NULL,
-      user_id INTEGER NOT NULL,
-      joined_at TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (list_id) REFERENCES collab_lists(id) ON DELETE CASCADE,
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE (list_id, user_id)
-    )
-  `);
-
-  // COLLABORATIVE TASKS TABLE (was missing!)
+  // COLLABORATIVE TASKS TABLE
   db.run(`
     CREATE TABLE IF NOT EXISTS collab_tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +86,25 @@ db.serialize(() => {
     )
   `);
 });
+
+// ========== HELPER FUNCTIONS ==========
+function addMemberToList(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  if (!members.includes(userId)) {
+    members.push(userId);
+  }
+  return JSON.stringify(members);
+}
+
+function removeMemberFromList(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  return JSON.stringify(members.filter((id) => id !== userId));
+}
+
+function isMember(memberIds, userId) {
+  const members = JSON.parse(memberIds);
+  return members.includes(userId);
+}
 
 // ========== JWT MIDDLEWARE ==========
 function verifyToken(req, res, next) {
@@ -218,16 +226,34 @@ app.post("/tasks/:id/undo", verifyToken, (req, res) => {
 // Get all collab lists user owns or is a member of
 app.get("/collab-lists", verifyToken, (req, res) => {
   db.all(
-    `SELECT DISTINCT cl.*, u.name as owner_name
+    `SELECT cl.*, u.name as owner_name
      FROM collab_lists cl
      LEFT JOIN users u ON cl.owner_id = u.id
-     LEFT JOIN collab_members cm ON cl.id = cm.list_id
-     WHERE cl.owner_id = ? OR cm.user_id = ?
+     WHERE cl.owner_id = ? OR json_array_contains(cl.member_ids, ?)
      ORDER BY cl.created_at DESC`,
     [req.userId, req.userId],
     (err, rows) => {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
+      if (err) {
+        // Fallback if json_array_contains doesn't exist
+        db.all(
+          `SELECT cl.*, u.name as owner_name
+           FROM collab_lists cl
+           LEFT JOIN users u ON cl.owner_id = u.id
+           ORDER BY cl.created_at DESC`,
+          [],
+          (err2, allRows) => {
+            if (err2) return res.status(500).json({ error: err2.message });
+            const filtered = allRows.filter(
+              (row) =>
+                row.owner_id === req.userId ||
+                isMember(row.member_ids, req.userId)
+            );
+            res.json(filtered);
+          }
+        );
+      } else {
+        res.json(rows);
+      }
     }
   );
 });
@@ -237,23 +263,20 @@ app.post("/collab-lists", verifyToken, (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: "List name required" });
 
+  // Initialize with owner as first member
+  const initialMembers = JSON.stringify([req.userId]);
+
   db.run(
-    "INSERT INTO collab_lists (name, owner_id) VALUES (?, ?)",
-    [name, req.userId],
+    "INSERT INTO collab_lists (name, owner_id, member_ids) VALUES (?, ?, ?)",
+    [name, req.userId, initialMembers],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
-
-      const listId = this.lastID;
-      // Automatically add owner as member
-      db.run(
-        "INSERT INTO collab_members (list_id, user_id) VALUES (?, ?)",
-        [listId, req.userId],
-        (memberErr) => {
-          if (memberErr)
-            return res.status(500).json({ error: memberErr.message });
-          res.json({ id: listId, name, owner_id: req.userId });
-        }
-      );
+      res.json({
+        id: this.lastID,
+        name,
+        owner_id: req.userId,
+        member_ids: initialMembers,
+      });
     }
   );
 });
@@ -262,16 +285,28 @@ app.post("/collab-lists", verifyToken, (req, res) => {
 app.get("/collab-lists/:id/members", verifyToken, (req, res) => {
   const { id } = req.params;
 
-  db.all(
-    `SELECT u.id, u.name, u.email, u.profile_picture, cm.joined_at
-     FROM collab_members cm
-     JOIN users u ON cm.user_id = u.id
-     WHERE cm.list_id = ?
-     ORDER BY cm.joined_at ASC`,
+  db.get(
+    `SELECT member_ids FROM collab_lists WHERE id = ?`,
     [id],
-    (err, rows) => {
+    (err, list) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json(rows);
+      if (!list) return res.status(404).json({ error: "List not found" });
+
+      const memberIds = JSON.parse(list.member_ids);
+      if (memberIds.length === 0) return res.json([]);
+
+      const placeholders = memberIds.map(() => "?").join(",");
+      db.all(
+        `SELECT id, name, email, profile_picture, created_at as joined_at
+         FROM users
+         WHERE id IN (${placeholders})
+         ORDER BY id ASC`,
+        memberIds,
+        (err, users) => {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json(users);
+        }
+      );
     }
   );
 });
@@ -295,21 +330,57 @@ app.post("/collab-lists/:id/members", verifyToken, (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!user) return res.status(404).json({ error: "User not found" });
 
-        // Add member
+        // Check if already a member
+        if (isMember(list.member_ids, user.id)) {
+          return res.status(400).json({ error: "User already a member" });
+        }
+
+        // Add member to array
+        const updatedMembers = addMemberToList(list.member_ids, user.id);
+
         db.run(
-          "INSERT INTO collab_members (list_id, user_id) VALUES (?, ?)",
-          [id, user.id],
+          "UPDATE collab_lists SET member_ids = ? WHERE id = ?",
+          [updatedMembers, id],
           function (err) {
-            if (err) {
-              if (err.message.includes("UNIQUE")) {
-                return res.status(400).json({ error: "User already a member" });
-              }
-              return res.status(500).json({ error: err.message });
-            }
-            res.json({ success: true });
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, member_ids: updatedMembers });
           }
         );
       });
+    }
+  );
+});
+
+// Remove member from collaborative list
+app.delete("/collab-lists/:id/members/:userId", verifyToken, (req, res) => {
+  const { id, userId } = req.params;
+  const userIdNum = parseInt(userId, 10);
+
+  // Check if requester owns the list
+  db.get(
+    "SELECT * FROM collab_lists WHERE id = ? AND owner_id = ?",
+    [id, req.userId],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list)
+        return res.status(403).json({ error: "Only owner can remove members" });
+
+      // Can't remove owner
+      if (userIdNum === list.owner_id) {
+        return res.status(400).json({ error: "Cannot remove owner from list" });
+      }
+
+      // Remove member from array
+      const updatedMembers = removeMemberFromList(list.member_ids, userIdNum);
+
+      db.run(
+        "UPDATE collab_lists SET member_ids = ? WHERE id = ?",
+        [updatedMembers, id],
+        function (err) {
+          if (err) return res.status(500).json({ error: err.message });
+          res.json({ success: true, member_ids: updatedMembers });
+        }
+      );
     }
   );
 });
@@ -320,11 +391,14 @@ app.get("/collab-lists/:id/tasks", verifyToken, (req, res) => {
 
   // Verify user is a member
   db.get(
-    "SELECT * FROM collab_members WHERE list_id = ? AND user_id = ?",
-    [id, req.userId],
-    (err, member) => {
+    "SELECT member_ids FROM collab_lists WHERE id = ?",
+    [id],
+    (err, list) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!member) return res.status(403).json({ error: "Not a member" });
+      if (!list) return res.status(404).json({ error: "List not found" });
+      if (!isMember(list.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not a member" });
+      }
 
       db.all(
         "SELECT * FROM collab_tasks WHERE list_id = ? AND deleted_at IS NULL ORDER BY date_added ASC",
@@ -348,11 +422,14 @@ app.post("/collab-lists/:id/tasks", verifyToken, (req, res) => {
 
   // Verify user is a member
   db.get(
-    "SELECT * FROM collab_members WHERE list_id = ? AND user_id = ?",
-    [id, req.userId],
-    (err, member) => {
+    "SELECT member_ids FROM collab_lists WHERE id = ?",
+    [id],
+    (err, list) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!member) return res.status(403).json({ error: "Not a member" });
+      if (!list) return res.status(404).json({ error: "List not found" });
+      if (!isMember(list.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not a member" });
+      }
 
       db.run(
         "INSERT INTO collab_tasks (name, due_date, due_time, priority, status, list_id, created_by, date_added) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))",
@@ -381,14 +458,17 @@ app.patch("/collab-tasks/:id", verifyToken, (req, res) => {
 
   // Verify user is a member of the list
   db.get(
-    `SELECT ct.*, cm.user_id 
+    `SELECT ct.*, cl.member_ids 
      FROM collab_tasks ct
-     JOIN collab_members cm ON ct.list_id = cm.list_id
-     WHERE ct.id = ? AND cm.user_id = ?`,
-    [id, req.userId],
+     JOIN collab_lists cl ON ct.list_id = cl.id
+     WHERE ct.id = ?`,
+    [id],
     (err, task) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!task) return res.status(403).json({ error: "Not authorized" });
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      if (!isMember(task.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
 
       const fields = Object.keys(updates)
         .map((k) => `${k} = ?`)
@@ -413,14 +493,17 @@ app.delete("/collab-tasks/:id", verifyToken, (req, res) => {
 
   // Verify user is a member
   db.get(
-    `SELECT ct.*, cm.user_id 
+    `SELECT ct.*, cl.member_ids 
      FROM collab_tasks ct
-     JOIN collab_members cm ON ct.list_id = cm.list_id
-     WHERE ct.id = ? AND cm.user_id = ?`,
-    [id, req.userId],
+     JOIN collab_lists cl ON ct.list_id = cl.id
+     WHERE ct.id = ?`,
+    [id],
     (err, task) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (!task) return res.status(403).json({ error: "Not authorized" });
+      if (!task) return res.status(404).json({ error: "Task not found" });
+      if (!isMember(task.member_ids, req.userId)) {
+        return res.status(403).json({ error: "Not authorized" });
+      }
 
       db.run(
         "UPDATE collab_tasks SET deleted_at = datetime('now') WHERE id = ?",
@@ -565,7 +648,7 @@ app.patch("/profile/password", verifyToken, (req, res) => {
   );
 });
 
-// Password reset endpoints (keeping existing code)
+// Password reset endpoints
 app.post("/request-reset", (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: "Missing email" });

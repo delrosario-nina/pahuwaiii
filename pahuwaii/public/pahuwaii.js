@@ -444,7 +444,7 @@ function createTaskCard(task) {
                 title="Delete">&#128465;</button>
       </div>
     </div>
-    <span class="text-xs text-gray-500" id="task_date_${task.id}">
+    <span class="text-xs text-gray-500" id="task_date_${task.id}">Date Created:
       ${
         task.date_added
           ? new Date(task.date_added).toLocaleDateString()
@@ -725,31 +725,42 @@ async function renderSidebar(lists) {
     emptyMsg.textContent = "No collaborative lists created yet";
     collabListsContainer.appendChild(emptyMsg);
   } else {
-    myLists.forEach((list) => {
+    for (const list of myLists) {
+      const members = await fetchListMembers(list.id);
+      const memberNames = members.map((m) => m.name).join(", ");
+
       const listItem = document.createElement("div");
       listItem.className =
         "mb-2 p-2 rounded hover:bg-gray-100 transition cursor-pointer border border-gray-300";
       listItem.setAttribute("data-list-id", list.id);
       listItem.innerHTML = `
-        <div class="flex justify-between items-center">
-          <span class="font-semibold text-sm">${escapeHtml(list.name)}</span>
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <div class="font-semibold text-sm">${escapeHtml(list.name)}</div>
+            <div class="text-xs text-gray-600 mt-1">Team Members: ${escapeHtml(
+              memberNames
+            )}</div>
+          </div>
+          
           <div class="flex items-center gap-2">
             <button 
               class="text-xs text-gray-600 hover:text-black"
               onclick="editCollabListName('${list.id}', '${escapeHtml(
         list.name
-      )}')"
+      )}'); event.stopPropagation();"
               title="Edit List Name">✎</button>
             <button
               class="text-xs text-blue-600 hover:text-blue-800"
-              onclick="openAddMembersModal('${list.id}')"
+              onclick="openAddMembersModal('${
+                list.id
+              }'); event.stopPropagation();"
               title="Manage Members">👥</button>
           </div>
         </div>
       `;
       listItem.addEventListener("click", () => handleSelectCollabList(list)());
       collabListsContainer.appendChild(listItem);
-    });
+    }
   }
 
   // Render Shared With Me section
