@@ -5,6 +5,8 @@ const priorityColors = {
   "do last": "bg-[#99c2a5] text-black",
 };
 
+let sessionUserId = null;
+
 function getCurrentUserId() {
   const token = localStorage.getItem("authToken");
   if (!token) return null;
@@ -15,6 +17,32 @@ function getCurrentUserId() {
     console.error("Error decoding token:", err);
     return null;
   }
+}
+
+function validateSession() {
+  const currentId = getCurrentUserId();
+
+  if (!currentId) {
+    // No token, redirect to auth
+    window.location.replace("/auth.html");
+    return false;
+  }
+
+  if (sessionUserId === null) {
+    // First load, set the session
+    sessionUserId = currentId;
+    sessionStorage.setItem("sessionUserId", currentId);
+    return true;
+  }
+
+  if (sessionUserId !== currentId) {
+    // User switched accounts, clear and redirect
+    console.warn("Session user mismatch detected");
+    window.location.replace("/auth.html");
+    return false;
+  }
+
+  return true;
 }
 
 let authToken = localStorage.getItem("authToken") || null;
@@ -157,10 +185,31 @@ async function loadUserProfilePicture() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("pahuwaii.js DOMContentLoaded fired");
+  // Initialize session tracking
+  const storedSessionId = sessionStorage.getItem("sessionUserId");
+  if (storedSessionId) {
+    sessionUserId = parseInt(storedSessionId);
+  }
+
+  // Validate session on page load
+  if (!validateSession()) {
+    return;
+  }
+
+  // Check session on page visibility change (tab switching)
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) {
+      validateSession();
+    }
+  });
+
+  // Check session periodically
+  setInterval(() => {
+    validateSession();
+  }, 5000); // Check every 5 seconds
 
   if (!authToken) {
-    window.location.href = "/auth.html";
+    window.location.replace("/auth.html");
     return;
   }
 

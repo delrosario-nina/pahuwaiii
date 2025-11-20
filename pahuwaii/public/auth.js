@@ -43,6 +43,12 @@ function getPasswordErrorMessage(validation) {
 document.addEventListener("DOMContentLoaded", () => {
   console.log("auth.js DOMContentLoaded fired");
 
+  // Clear browser history to prevent going back to logged-in pages
+  window.history.pushState(null, null, window.location.href);
+  window.addEventListener("popstate", function (event) {
+    window.history.pushState(null, null, window.location.href);
+  });
+
   // If token exists, try to load profile
   if (authToken) {
     fetch("/profile", {
@@ -187,11 +193,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Logout
   document.getElementById("logoutBtn").addEventListener("click", () => {
+    // Get current user ID before clearing
+    const currentId = getCurrentUserId();
+
+    // Clear all authentication data
     authToken = null;
     currentUser = null;
     localStorage.removeItem("authToken");
-    window.location.href = "/auth.html";
+
+    // Clear session tracking
+    sessionStorage.removeItem("sessionUserId");
+
+    // Clear any cached user data
+    if (currentId) {
+      localStorage.removeItem(`profilePic_${currentId}`);
+    }
+
+    // Clear sort preference (optional, but clean)
+    // localStorage.removeItem("sortBy");
+
+    // Force page reload to auth page, replacing history
+    window.location.replace("/auth.html");
   });
+
+  function getCurrentUserId() {
+    const token = localStorage.getItem("authToken");
+    if (!token) return null;
+    try {
+      const decoded = JSON.parse(atob(token.split(".")[1]));
+      return decoded.user_id;
+    } catch (err) {
+      console.error("Error decoding token:", err);
+      return null;
+    }
+  }
 
   // Accessibility Settings
   const darkToggle = document.getElementById("darkModeToggle");
