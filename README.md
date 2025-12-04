@@ -2,9 +2,9 @@
 For a student overwhelmed by numerous backlogs everyday, creating a to-do list may seem too stimulating and daunting. Pahuwaii aims to be a to-do list that is easy to the eyes and accommodating to students that are easily overstimulated. 
 
 > [!IMPORTANT]
-> ###### How to Run the Web App:  
-> Run the node.js file (in terminal via command ```node server.js```)
-> click the link provided (http://localhost:3000)
+> ###### How to Run the Web App:   
+> Run the node.js file (in terminal via command ```node server.js```)  
+> click the link provided (http://localhost:3000)  
 
 ## Tech Stack:
 a) **Frontend** - HTML, CSS (+Tailwind), JavaScript  

@@ -16,20 +16,29 @@ let currentUser = null;
 const urlParams = new URLSearchParams(window.location.search);
 const resetToken = urlParams.get("token");
 
-// Toast notification for alerts / errors
+// Track active toasts by key
 const activeToasts = new Set();
-function showToast(message, duration = 3000) {
+const activeToastElements = [];
+
+function showToast(message, bgColor = "#7c69bd", duration = 3000) {
+  const key = message;
   // prevent duplicate toasts
-  if (activeToasts.has(message)) return;
-  activeToasts.add(message);
+  if (activeToasts.has(key)) return;
+  activeToasts.add(key);
+
   const toastElement = document.createElement("div");
-  toastElement.className = "fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2 bg-[#7c69bd] text-white px-4 py-2 rounded-lg shadow-lg";
+  toastElement.className = "fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 rounded-lg shadow-lg";
   toastElement.textContent = message;
+  toastElement.style.backgroundColor = bgColor;
+  toastElement.style.setProperty("background-color", bgColor, "important");
+  toastElement.style.transition = 'opacity 300ms, bottom 300ms ease-in-out';
+
+  // multiple toasts
+  const offset = document.querySelectorAll(".toastElement").length * 60;
+  toastElement.style.bottom = `${60 + offset}px`;
+  toastElement.classList.add("toastElement");
   document.body.appendChild(toastElement);
-  // multiple toasts for multiple alerts
-  const existingToasts = document.querySelectorAll('.toast-notification');
-  const offset = existingToasts.length * 60;
-  toastElement.style.bottom = `${40 + offset}px`;
+  activeToastElements.push(toastElement); 
 
   // fade in - fade out
   setTimeout(() => { toastElement.style.opacity = '1'; }, 10);
@@ -37,9 +46,26 @@ function showToast(message, duration = 3000) {
     toastElement.style.opacity = '0';
     setTimeout(() => {
       toastElement.remove();
-      activeToasts.delete(message);
+      activeToasts.delete(key);
+      // Remove from tracking array
+      const index = activeToastElements.indexOf(toastElement);
+      if (index > -1) { activeToastElements.splice(index, 1); }
+      // Reposition remaining toasts
+      repositionToasts();
     }, 300); 
   }, duration);
+}
+
+function repositionToasts() {
+  activeToastElements.forEach((toast, index) => {
+    const newBottom = 60 + (index * 60);
+    toast.style.bottom = `${newBottom}px`;
+  });
+}
+
+function validateEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 function validatePassword(password) {
@@ -65,6 +91,7 @@ function getPasswordErrorMessage(validation) {
 
   return `Password must contain ${errors.join(", ")}.`;
 }
+
 // Initialize all DOM elements and set up event listeners
 document.addEventListener("DOMContentLoaded", () => {
   console.log("auth.js DOMContentLoaded fired");
@@ -137,6 +164,9 @@ document.addEventListener("DOMContentLoaded", () => {
   showSignupBtn.addEventListener("click", activateSignup);
   switchToSignup.addEventListener("click", (e) => {
     e.preventDefault();
+    // Transfer email from login to signup
+    const loginEmail = document.getElementById("login_email").value;
+    if (loginEmail) { document.getElementById("signup_email").value = loginEmail; }
     activateSignup();
   });
 
@@ -337,11 +367,11 @@ document.addEventListener("DOMContentLoaded", () => {
             updateProfileToast.classList.add("hidden");
           }, 1500);
         } else {
-          showToast(data.error || "( °ㅁ° ) Can't update profile picture");
+          showToast(data.error || "( °ㅁ° ) Can't update profile picture", "#ef8e8e");
         }
       } catch (err) {
         console.error("Error updating profile picture:", err);
-        showToast("Can't update profile picture, try again? (˶°ㅁ°)⚠︎");
+        showToast("Can't update profile picture, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
       }
     });
   });
@@ -403,6 +433,16 @@ async function handleLogin(e) {
   const email = document.getElementById("login_email").value.trim();
   const password = document.getElementById("login_password").value.trim();
 
+  if (!email || !password) {
+    showToast("✘ Please fill in all fields", "#ef8e8e");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    showToast("✘ Please enter a valid email address", "#ef8e8e");
+    return;
+  }
+
   try {
     const res = await fetch("/login", {
       method: "POST",
@@ -411,29 +451,38 @@ async function handleLogin(e) {
     });
 
     const data = await res.json();
-    // console debugging
     console.log("Server response:", data);
     console.log("Response status:", res.status);
 
     if (res.ok) {
       authToken = data.token;
       localStorage.setItem("authToken", authToken);
+      sessionStorage.setItem("sessionUserId", data.user_id);
       currentUser = {
         id: data.user_id,
         name: data.name,
         email: data.email,
         bio: data.bio,
+        profile_picture: data.profile_picture,
       };
+      // Persist profile picture
+      try {
+        if (data.user_id && data.profile_picture) {
+          localStorage.setItem(`profilePic_${data.user_id}`, data.profile_picture);
+        }
+      } catch (e) {
+        console.warn("persist avatar failed", e);
+      }
       loginForm.reset();
       // After login, go to the to-do list page
       window.location.href = "/index.html";
-      showToast("ദ്ദി( • ᴗ < )♡ Login successful ! ⋆·˚*");
+      showToast("ദ്ദി( • ᴗ < )♡ Login successful ! ⋆·˚*", "#32AA0E");
     } else {
-      showToast(data.error || "( °ㅁ° ) Login failed");
+      showToast(data.error || "( °ㅁ° ) Login failed", "#ef8e8e");
     }
   } catch (err) {
     console.error("Login error:", err);
-    showToast("Couldn't log you in, try again? (˶°ㅁ°)⚠︎");
+    showToast("Couldn't log you in, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -449,32 +498,47 @@ async function handleSignup(e) {
     const res = await fetch("/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, confirm_password}),
     });
 
-  if (password !== confirm_password) {
-    showToast("✘ Passwords don't match ✘");
-    return;
-  }
+    if (!name || !email || !password || !confirm_password) {
+      showToast("✘ Please fill in all fields", "#ef8e8e");
+      return;
+    }
 
-  // const validation = validatePassword(password);
-  // if (!validation.isValid) {
-  //   showToast(getPasswordErrorMessage(validation));
-  //   return;
-  // }
+    if (!validateEmail(email)) {
+      showToast("✘ Please enter a valid email address", "#ef8e8e");
+      return;
+    }
+    if (password !== confirm_password) {
+      showToast("✘ Passwords don't match ✘", "#ef8e8e");
+      return;
+    }
+
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      showToast(getPasswordErrorMessage(validation), "#ef8e8e");
+      return;
+    }
 
     const data = await res.json();
 
     if (res.ok) {
-      showToast("Registered ! (ﾉ^ヮ^)ﾉ* Please login");
+      showToast("Registered ! (ﾉ^ヮ^)ﾉ* Please login", "#32AA0E");
       signupForm.reset();
+      // Pre-fill login email and switch to login
+      setTimeout(() => {
+        document.getElementById("login_email").value = email; // ✅ Auto-fill email
+        activateLogin();
+        document.getElementById("login_password").focus(); // ✅ Focus password field
+      }, 500);
       setTimeout(() => activateLogin(), 500);
     } else {
-      showToast(data.error || "( °ㅁ° ) Registration failed");
+      showToast(data.error || "( °ㅁ° ) Registration failed", "#ef8e8e");
     }
   } catch (err) {
     console.error("Signup error:", err);
-    showToast("Couldn't register you, try again? (˶°ㅁ°)⚠︎");
+    showToast("Couldn't register you, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -554,10 +618,10 @@ async function handleEditFieldSave() {
           newValue;
       }
     } else {
-      showToast(data.error || "( °ㅁ° ) Couldn't update profile");
+      showToast(data.error || "( °ㅁ° ) Couldn't update profile", "#ef8e8e");
     }
   } catch (err) {
-    showToast("Couldn't update profile, try again? (˶°ㅁ°)⚠︎");
+    showToast("Couldn't update profile, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -593,7 +657,7 @@ async function handleChangePassword() {
 
     const validation = validatePassword(newPassword);
     if (!validation.isValid) {
-      showToast(getPasswordErrorMessage(validation));
+      showToast(getPasswordErrorMessage(validation), "#ef8e8e");
       return;
     }
 
@@ -610,10 +674,10 @@ async function handleChangePassword() {
       const data = await res.json();
 
       if (res.ok) {
-        const updateProfileToast =
-          document.getElementById("updateProfileToast");
-        updateProfileToast.classList.remove("hidden");
-        setTimeout(() => updateProfileToast.classList.add("hidden"), 1500);
+        const updatePasswordToast =
+          document.getElementById("updatePasswordToast");
+        updatePasswordToast.classList.remove("hidden");
+        setTimeout(() => updatePasswordToast.classList.add("hidden"), 1500);
 
         editFieldModal.classList.add("hidden");
 
@@ -622,11 +686,11 @@ async function handleChangePassword() {
           '<input id="editFieldInput" type="text" class="border p-2 rounded" />';
         saveEditFieldBtn.onclick = handleEditFieldSave;
       } else {
-        showToast(data.error || "( °ㅁ° ) Couldn't update password");
+        showToast(data.error || "( °ㅁ° ) Couldn't update password", "#ef8e8e");
       }
     } catch (err) {
       console.error("Password change error:", err);
-      showToast("Couldn't update password, try again? (˶°ㅁ°)");
+      showToast("Couldn't update password, try again? (˶°ㅁ°)", "#ef8e8e");
     }
   };
 }
@@ -636,7 +700,7 @@ async function handleDeleteAccount() {
   modal.classList.add("hidden");
 
   if (!authToken) {
-    showToast("✗ Hold on ! You need to login before deleting your account !");
+    showToast("✗ Hold on ! You need to login before deleting your account !", "#ef8e8e");
     return;
   }
 
@@ -654,11 +718,11 @@ async function handleDeleteAccount() {
       window.location.href = "/auth.html";
     } else {
       const data = await res.json();
-      showToast(data.error || "( °ㅁ° ) Couldn't delete account");
+      showToast(data.error || "( °ㅁ° ) Couldn't delete account", "#ef8e8e");
     }
   } catch (err) {
     console.error(err);
-    showToast("Couldn't delete account, try again? (˶°ㅁ°)⚠︎");
+    showToast("Couldn't delete account, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -666,21 +730,47 @@ async function handleResetRequest(e) {
   e.preventDefault();
   const email = document.getElementById("reset_email").value;
 
-  const res = await fetch("/request-reset", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
+  if (!email) {
+    showToast("Please enter your ✉︎ email ✉︎");
+    return;
+  }
+  if (!validateEmail(email)) {
+    showToast("✘ Please enter a valid email address", "#ef8e8e");
+    return;
+  }
 
-  const data = await res.json();
+  // Show loading state
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Sending . . . ";
+  submitBtn.style.backgroundColor = "#cccccc";
 
-  if (res.ok) {
-    showToast("જ⁀➴ ✉︎ Check your emails for the link reset link ᯓᡣ𐭩");
-    document.getElementById("resetModal").classList.add("hidden");
-    document.getElementById("resetRequestForm").reset();
-    authModal.classList.remove("hidden");
-  } else {
-    showToast(data.error || "Can't send reset email, try again? (˶°ㅁ°)⚠︎");
+  try {
+    const res = await fetch("/request-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      showToast("જ⁀➴ ✉︎ Check your emails for the link reset link ᯓᡣ𐭩", "#32AA0E");
+      document.getElementById("resetModal").classList.add("hidden");
+      document.getElementById("resetRequestForm").reset();
+      authModal.classList.remove("hidden");
+    } else {
+      showToast(data.error || "Can't send reset email, try again? (˶°ㅁ°)⚠︎");
+    }
+  } catch (err) {
+    console.error("Reset request error:", err);
+    showToast("Network error, please try again (˶°ㅁ°)⚠︎", "#ef8e8e");
+  } finally {
+    // Restore button state
+    submitBtn.disabled = false;
+    submitBtn.style.backgroundColor = "#32AA0E";
+    submitBtn.textContent = originalText;
   }
 }
 
@@ -697,9 +787,9 @@ async function handleSetPassword(e) {
   const data = await res.json();
 
   if (res.ok) {
-    showToast("(ദ്ദി^ᗜ^) Password reset ✧ Login to continue!");
+    showToast("(ദ്ദി^ᗜ^) Password reset ✧ Login to continue!", "#32AA0E");
     window.location.href = "/auth.html";
   } else {
-    showToast(data.error || "( °ㅁ° ) Password reset failed");
+    showToast(data.error || "( °ㅁ° ) Password reset failed", "#ef8e8e");
   }
 }

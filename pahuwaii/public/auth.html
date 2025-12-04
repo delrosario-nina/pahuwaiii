@@ -68,7 +68,7 @@
   <div id="resetModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
     <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
       <h2 class="text-2xl font-bold mb-4">Reset Password</h2>
-      <form id="resetRequestForm" class="flex flex-col gap-4">
+      <form id="resetRequestForm" class="flex flex-col gap-4" novalidate>
         <input type="email" id="reset_email" placeholder="Your Email" required class="border p-2 rounded">
         <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Send Reset Link</button>
       </form>
@@ -180,6 +180,11 @@
 
         <div id="updateProfileToast"
           class="hidden absolute z-50 bottom-10 bg-[#7c69bd] text-white px-4 py-2 rounded-lg shadow-lg">
+          profile updated successfully! (๑•̀ㅂ•́)و✧
+        </div>
+        
+        <div id="updatePasswordToast"
+          class="hidden absolute z-50 bottom-10 bg-[#29810E] text-white px-4 py-2 rounded-lg shadow-lg">
           profile updated successfully! (๑•̀ㅂ•́)و✧
         </div>
       </div>

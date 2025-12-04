@@ -141,20 +141,30 @@ function updateListSelection(selectedId) {
   }
 }
 
-
 // Toast notification for alerts / errors
-function showToast(message, bgColor = "bg-[#29810E]", duration = 3000) {
+const activeToasts = new Set();
+const activeToastElements = [];
+
+function showToast(message, bgColor = "#7c69bd", taskId = null, duration = 3000) {
+  // unique key foreach task
+  const key = taskId ? `${taskId}:${message}` : message;
+  // prevent duplicate toasts
+  if (activeToasts.has(key)) return;
+  activeToasts.add(key);
+
   const toastElement = document.createElement("div");
   toastElement.className = `fixed z-[9999] right-10 transform -translate-x-0 text-white text-lg px-4 py-2 rounded-lg shadow-lg`;
   toastElement.textContent = message;
   toastElement.style.backgroundColor = bgColor;
   toastElement.style.setProperty("background-color", bgColor, "important");
+  toastElement.style.transition = 'opacity 300ms, bottom 300ms ease-in-out';
+
+  // multiple toasts
   const offset = document.querySelectorAll(".toastElement").length * 60;
   toastElement.style.bottom = `${60 + offset}px`;
-
   toastElement.classList.add("toastElement");
   document.body.appendChild(toastElement);
-
+  activeToastElements.push(toastElement); 
 
   // fade in - fade out
   setTimeout(() => { toastElement.style.opacity = '1'; }, 10);
@@ -162,8 +172,21 @@ function showToast(message, bgColor = "bg-[#29810E]", duration = 3000) {
     toastElement.style.opacity = '0';
     setTimeout(() => {
       toastElement.remove();
+      activeToasts.delete(key);
+      // Remove from tracking array
+      const index = activeToastElements.indexOf(toastElement);
+      if (index > -1) { activeToastElements.splice(index, 1); }
+      // Reposition remaining toasts
+      repositionToasts();
     }, 300); 
   }, duration);
+}
+
+function repositionToasts() {
+  activeToastElements.forEach((toast, index) => {
+    const newBottom = 60 + (index * 60);
+    toast.style.bottom = `${newBottom}px`;
+  });
 }
 
 async function loadUserProfilePicture() {
@@ -305,19 +328,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Validation
     if (!name) {
-      showToast("Needs task name", "#ef8e8e");
+      showToast("Needs task name");
       return;
     }
     if (!due_date) {
-      showToast("Please select its due date", "#ef8e8e");
+      showToast("Please select its due date");
       return;
     }
     if (!due_time) {
-      showToast("Please select its due time", "#ef8e8e");
+      showToast("Please select its due time");
       return;
     }
     if (!priority) {
-      showToast("Task priority?", "#ef8e8e");
+      showToast("Needs task priority");
       return;
     }
 
@@ -639,7 +662,7 @@ async function updateStatus(id, status) {
     throw new Error(txt || "Server error");
   }
   if (status === "done") {
-    showToast("☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆");
+    showToast("☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆", "#32AA0E", id);
   }
   if (isCollabMode) {
     await fetchCollabTasks(currentCollabListId);
@@ -656,6 +679,11 @@ window.updateTaskField = async function (id, field, value) {
     headers: getAuthHeaders(),
     body: JSON.stringify({ [field]: value }),
   });
+  
+  if (value === "done") {
+    showToast("☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆", "#32AA0E", id);
+  }
+
   if (isCollabMode) {
     await fetchCollabTasks(currentCollabListId);
   } else {
@@ -935,7 +963,7 @@ function getCurrentUserId() {
 window.editCollabListName = function (listId, currentName) {
   const newName = prompt("Enter new list name:", currentName);
   if (newName && newName !== currentName) {
-    showToast("List name update feature to be added teehee", "#7c69bd");
+    showToast("List name update feature to be added teehee");
   }
 };
 
@@ -986,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const name = newListNameInput.value.trim();
     if (!name) {
-      showToast("Please enter a list name", "#ef8e8e");
+      showToast("Please enter a list name");
       return;
     }
     try {
@@ -1040,12 +1068,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = document.getElementById("memberEmails").value.trim();
 
     if (!email) {
-      showToast("Add your email address", "#ef8e8e");
+      showToast("Add your email address");
       return;
     }
 
     if (!currentListForMemberAdd) {
-      showToast("Select a list first", "#ef8e8e");
+      showToast("Select a list first");
       return;
     }
 

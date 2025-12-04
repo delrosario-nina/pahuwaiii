@@ -544,7 +544,7 @@ app.post("/signup", (req, res) => {
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (user) return res.status(409).json({ error: "Email already in use" });
+    if (user) return res.status(409).json({ error: "✘ Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
     db.run(
@@ -567,10 +567,10 @@ app.post("/login", (req, res) => {
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: "Server error" });
-    if (!user) return res.status(404).json({ error: "No such account found" });
+    if (!user) return res.status(404).json({ error: "Email not found (。_。;)" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ error: "Incorrect password" });
+    if (!match) return res.status(401).json({ error: "Sorry! Wrong password (。_。;)" });
 
     const token = jwt.sign({ user_id: user.id }, JWT_SECRET, {
       expiresIn: "1d",
