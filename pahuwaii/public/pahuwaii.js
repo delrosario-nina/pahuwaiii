@@ -140,9 +140,41 @@ function updateListSelection(selectedId) {
     }
   }
 }
+
+
+// Toast notification for alerts / errors
+function showToast(message, bgColor = "bg-[#29810E]", duration = 3000) {
+  const toastElement = document.createElement("div");
+  toastElement.className = `fixed z-[9999] right-10 transform -translate-x-0 text-white text-lg px-4 py-2 rounded-lg shadow-lg`;
+  toastElement.textContent = message;
+  toastElement.style.backgroundColor = bgColor;
+  toastElement.style.setProperty("background-color", bgColor, "important");
+  const offset = document.querySelectorAll(".toastElement").length * 60;
+  toastElement.style.bottom = `${60 + offset}px`;
+
+  toastElement.classList.add("toastElement");
+  document.body.appendChild(toastElement);
+
+
+  // fade in - fade out
+  setTimeout(() => { toastElement.style.opacity = '1'; }, 10);
+  setTimeout(() => {
+    toastElement.style.opacity = '0';
+    setTimeout(() => {
+      toastElement.remove();
+    }, 300); 
+  }, duration);
+}
+
 async function loadUserProfilePicture() {
   const token = localStorage.getItem("authToken");
   if (!token) return;
+  
+  const headerProfilePic = document.getElementById("headerProfilePic");
+  // hides pfp to prevent change flash
+  if (headerProfilePic) {
+    headerProfilePic.style.opacity = '0';
+  }
 
   // Try to get local persisted avatar first so UI updates instantly
   try {
@@ -150,9 +182,9 @@ async function loadUserProfilePicture() {
     const uid = decoded.user_id || decoded.id;
     if (uid) {
       const saved = localStorage.getItem(`profilePic_${uid}`);
-      if (saved) {
-        const headerProfilePic = document.getElementById("headerProfilePic");
-        if (headerProfilePic) headerProfilePic.src = saved;
+      if (saved && headerProfilePic) {
+      headerProfilePic.src = saved;
+      headerProfilePic.style.opacity = '1';
       }
     }
   } catch (err) {
@@ -171,16 +203,23 @@ async function loadUserProfilePicture() {
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.profile_picture) {
-      const headerProfilePic = document.getElementById("headerProfilePic");
-      if (headerProfilePic) headerProfilePic.src = data.profile_picture;
+      if (headerProfilePic) {
+        headerProfilePic.src = data.profile_picture;
+        headerProfilePic.style.opacity = '1';
+      }
       try {
         const uid2 = data.id || data.user_id;
         if (uid2)
           localStorage.setItem(`profilePic_${uid2}`, data.profile_picture);
       } catch (e) {}
+    } else if (headerProfilePic && headerProfilePic.style.opacity === '0') {
+      // No profile picture from server and no cached version, show default
+      headerProfilePic.style.opacity = '1';
     }
   } catch (err) {
     console.error("Error loading profile picture:", err);
+    // On error, still show whatever is there (cached or default)
+    if (headerProfilePic) headerProfilePic.style.opacity = '1';
   }
 }
 
@@ -259,13 +298,30 @@ document.addEventListener("DOMContentLoaded", async () => {
   taskForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const task = {
-      name: document.getElementById("name").value,
-      due_date: document.getElementById("due_date").value || null,
-      due_time: document.getElementById("due_time").value || null,
-      priority: document.getElementById("priority").value,
-      status: "to do",
-    };
+    const name = document.getElementById("name").value.trim();
+    const due_date = document.getElementById("due_date").value;
+    const due_time = document.getElementById("due_time").value;
+    const priority = document.getElementById("priority").value;
+
+    // Validation
+    if (!name) {
+      showToast("Needs task name", "#ef8e8e");
+      return;
+    }
+    if (!due_date) {
+      showToast("Please select its due date", "#ef8e8e");
+      return;
+    }
+    if (!due_time) {
+      showToast("Please select its due time", "#ef8e8e");
+      return;
+    }
+    if (!priority) {
+      showToast("Task priority?", "#ef8e8e");
+      return;
+    }
+
+    const task = { name, due_date, due_time, priority, status: "to do",};
 
     const url = isCollabMode
       ? `/collab-lists/${currentCollabListId}/tasks`
@@ -288,11 +344,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to add task");
+        showToast(data.error || "⚠︎ Couldn't add task (＠_＠;)", "#ef8e8e");
       }
     } catch (err) {
       console.error("Error adding task:", err);
-      alert("Error adding task");
+      showToast("⚠︎ Error adding task...", "#ef8e8e");
     }
   });
 
@@ -409,9 +465,11 @@ async function fetchCollabTasks(listId) {
       updateProgressBar();
     } else {
       console.error("Failed to fetch collab tasks");
+      showToast("⚠︎ Couldn't fetch collaborative tasks", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error fetching collab tasks:", err);
+    showToast("⚠︎ Error fetching collaborative tasks", "#ef8e8e");
   }
 }
 
@@ -558,7 +616,7 @@ function createTaskCard(task) {
         await updateStatus(task.id, newStatus);
       } catch (err) {
         cb.checked = !cb.checked;
-        alert("Failed to update status: " + err.message);
+        showToast("⚠︎ Update Status Failed: " + err.message, "#ef8e8e");
       } finally {
         cb.disabled = false;
       }
@@ -579,6 +637,9 @@ async function updateStatus(id, status) {
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(txt || "Server error");
+  }
+  if (status === "done") {
+    showToast("☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆");
   }
   if (isCollabMode) {
     await fetchCollabTasks(currentCollabListId);
@@ -655,11 +716,11 @@ async function updateTask(taskId) {
         await fetchTasks();
       }
     } else {
-      alert("Failed to update task");
+      showToast("(°ロ°) Couldn't update task", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error updating task:", err);
-    alert("Error updating task");
+    showToast("Error updating task, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -874,7 +935,7 @@ function getCurrentUserId() {
 window.editCollabListName = function (listId, currentName) {
   const newName = prompt("Enter new list name:", currentName);
   if (newName && newName !== currentName) {
-    alert("List name update feature coming soon");
+    showToast("List name update feature to be added teehee", "#7c69bd");
   }
 };
 
@@ -889,12 +950,13 @@ async function createCollabList(name) {
 
     if (res.ok) {
       await loadSidebarData();
-      alert("Collaborative list created!");
+      showToast("⋆⭒˚ Collaborative list created ! 𖠋𖠋𖠋*.⋆");
     } else {
-      alert("Failed to create list");
+      showToast("Failed to create list (°ロ°)", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error creating list:", err);
+    showToast("Error creating list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -924,7 +986,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const name = newListNameInput.value.trim();
     if (!name) {
-      alert("Please enter a list name");
+      showToast("Please enter a list name", "#ef8e8e");
       return;
     }
     try {
@@ -939,14 +1001,14 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok) {
         createListModal.classList.add("hidden");
         await loadSidebarData();
-        alert("Collaborative list created!");
+        showToast("[+𖠋] Collaborative list added !");
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to create list");
+        showToast("Failed to create list (°ロ°)", "#ef8e8e");
       }
     } catch (err) {
       console.error("Error creating list:", err);
-      alert("Error creating list");
+      showToast("Error creating list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
     }
   });
 });
@@ -978,12 +1040,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const email = document.getElementById("memberEmails").value.trim();
 
     if (!email) {
-      alert("Please enter an email address.");
+      showToast("Add your email address", "#ef8e8e");
       return;
     }
 
     if (!currentListForMemberAdd) {
-      alert("No list selected.");
+      showToast("Select a list first", "#ef8e8e");
       return;
     }
 
@@ -998,17 +1060,17 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       if (res.ok) {
-        alert("Member added successfully");
+        showToast("[ +𖠋 Added Member ! ]");
         addMembersModal.classList.add("hidden");
         currentListForMemberAdd = null;
         await loadSidebarData();
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to add member");
+        showToast(data.error || "Failed to add member (°ロ°)", "#ef8e8e");
       }
     } catch (err) {
       console.error("Error adding member:", err);
-      alert("Error adding member");
+      showToast("Error adding member, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
     }
   });
 });

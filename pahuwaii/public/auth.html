@@ -20,7 +20,7 @@
 
   <!-- Login/Signup Modal -->
   <div id="authModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
-  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
 
     <!-- Toggle Buttons -->
     <div class="flex bg-gray-200 rounded-full p-1 w-full">
@@ -35,8 +35,8 @@
     </div>
 
     <!-- Login Form -->
-    <form id="loginForm" class="flex flex-col gap-4 w-full">
-      <input type="text" id="login_name" placeholder="Name" required class="border p-2 rounded">
+    <form id="loginForm" class="flex flex-col gap-4 w-full" novalidate>
+      <input type="text" id="login_email" placeholder="Email" required class="border p-2 rounded">
       <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
       <a href="#" id="forgotPasswordLink" class="text-gray-600 text-sm self-start hover:underline">Forgot Password?</a>
       <button type="submit" class="bg-[#7c69bd] text-white px-4 py-2 rounded hover:bg-[#5a5371] transition">
@@ -50,7 +50,7 @@
     </form>
 
     <!-- Signup Form -->
-    <form id="signupForm" class="flex flex-col gap-4 w-full hidden">
+    <form id="signupForm" class="flex flex-col gap-4 w-full hidden" novalidate>
       <input type="text" id="signup_name" placeholder="Name" required class="border p-2 rounded">
       <input type="email" id="signup_email" placeholder="Email" required class="border p-2 rounded">
       <input type="password" id="signup_password" placeholder="Password" required class="border p-2 rounded">
@@ -61,8 +61,7 @@
     </form>
 
     <button id="closeAuthModal" class="mt-2 text-gray-500 hover:text-black text-sm">Cancel</button>
-  </div>
-</div>
+    </div>
   </div>
 
   <!-- Password Reset Modal -->

@@ -49,7 +49,7 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       bio TEXT NOT NULL DEFAULT 'insert bio here',
-      profile_picture TEXT DEFAULT 'avatar1.png',
+      profile_picture TEXT DEFAULT 'profile-icons/user-modified.png',
       reset_token TEXT,
       reset_token_expiry INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
@@ -537,9 +537,9 @@ app.delete("/collab-tasks/:id", verifyToken, (req, res) => {
 // ========== USER AUTHENTICATION ==========
 
 app.post("/signup", (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "Missing fields" });
+  const { name, email, password, confirm_password} = req.body;
+  if (!name || !email || !password || !confirm_password) {
+    return res.status(400).json({ error: "Please fill in all fields" });
   }
 
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
@@ -560,12 +560,12 @@ app.post("/signup", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const { name, password } = req.body;
-  if (!name || !password) {
+  const { email, password } = req.body;
+  if (!email || !password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
 
-  db.get("SELECT * FROM users WHERE name = ?", [name], async (err, user) => {
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: "Server error" });
     if (!user) return res.status(404).json({ error: "No such account found" });
 
