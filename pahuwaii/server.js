@@ -298,6 +298,7 @@ app.post("/collab-lists", verifyToken, (req, res) => {
   );
 });
 
+// Update collaborative list name if owner
 app.patch("/collab-lists/:id", verifyToken, (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
@@ -334,6 +335,28 @@ app.patch("/collab-lists/:id", verifyToken, (req, res) => {
       );
     }
   );
+});
+
+// Delete collaborative list
+app.delete("/collab-lists/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Only delete lists owned by the logged-in user
+  const sql = `
+    DELETE FROM collab_lists
+    WHERE id = ? AND owner_id = ?
+  `;
+
+  db.run(sql, [id, req.userId], function (err) {
+    if (err) {
+      console.error("Error deleting list:", err);
+      return res.status(500).json({ error: "Failed to delete list" });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "List not found or not yours" });
+    }
+    res.json({ success: true, message: "List deleted" });
+  });
 });
 
 // Get members of a collaborative list

@@ -23,7 +23,7 @@
   </head>
 
   <body class="min-h-screen flex flex-col items-center p-4 md:p-8">
-    <!-- topbar -->
+    <!-- TOPBAR -->
     <div class="w-full max-w-7xl flex items-center gap-4 mb-6">
       <button
         id="showSidebarBtn"
@@ -59,6 +59,7 @@
       </a>
     </div>
 
+    <!-- SIDEBAR -->
     <aside
       id="sidebar"
       class="fixed top-0 left-0 h-full w-80 bg-white border-r-2 border-black transform -translate-x-full transition-transform duration-300 z-40 flex flex-col"
@@ -423,6 +424,35 @@
               class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
             >
               Add Members
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- DELETE COLLABORATIVE LIST MODAL -->
+    <div
+      id="deleteListModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50 rounded"
+    >
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Are you sure you want to delete this collaborative list?
+        </h2>
+        <form id="deleteListForm" class="grid grid-cols-1 gap-3">
+          <div class="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              id="cancelDeleteListBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#ef8e8e] text-white hover:bg-black rounded"
+            >
+              Yes, Delete
             </button>
           </div>
         </form>

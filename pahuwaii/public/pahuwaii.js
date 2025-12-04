@@ -924,6 +924,12 @@ async function renderSidebar(lists) {
                 list.id
               }'); event.stopPropagation();"
               title="Manage Members">👥</button>
+            <button 
+              class="text-xs text-red-400 hover:text-red-700"
+              onclick="openDeleteListModal('${
+                list.id
+              }'); event.stopPropagation();"
+              title="Delete Collaborative List">🗑</button>
           </div>
         </div>
       `;
@@ -1011,6 +1017,7 @@ async function createCollabList(name) {
   }
 }
 
+// CREATE LIST MODAL HANDLERS
 document.addEventListener("DOMContentLoaded", () => {
   const createListModal = document.getElementById("createListModal");
   const createListForm = document.getElementById("createListForm");
@@ -1064,39 +1071,47 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-let currentListForMemberAdd = null;
+  let currentListForMemberAdd = null;
+  window.openAddMembersModal = function (listId) {
+    currentListForMemberAdd = listId;
+    const addMembersModal = document.getElementById("addMembersModal");
+    const addMembersForm = document.getElementById("addMembersForm");
+    addMembersForm.reset();
+    addMembersModal.classList.remove("hidden");
+    document.getElementById("memberEmails").focus();
+  };
 
-window.openAddMembersModal = function (listId) {
-  currentListForMemberAdd = listId;
-  const addMembersModal = document.getElementById("addMembersModal");
-  const addMembersForm = document.getElementById("addMembersForm");
-  addMembersForm.reset();
-  addMembersModal.classList.remove("hidden");
-  document.getElementById("memberEmails").focus();
-};
+  let currentEditingListId = null;
+  let currentEditingListName = null;
+  window.openListNameModal = function (listId) {
+    const listElement = document.querySelector(`[data-list-id="${listId}"]`);
+    if (!listElement) return;
+    
+    const currentName = listElement.querySelector('.font-semibold').textContent.trim();
+    
+    // Store current values
+    currentEditingListId = listId;
+    currentEditingListName = currentName;
+    
+    // Set up modal
+    const modal = document.getElementById("editListNameModal");
+    const input = document.getElementById("newName");
+    
+    input.value = currentName;
+    modal.classList.remove("hidden");
+    
+    setTimeout(() => input.focus(), 50);
+  };
 
-let currentEditingListId = null;
-let currentEditingListName = null;
-window.openListNameModal = function (listId) {
-  const listElement = document.querySelector(`[data-list-id="${listId}"]`);
-  if (!listElement) return;
-  
-  const currentName = listElement.querySelector('.font-semibold').textContent.trim();
-  
-  // Store current values
-  currentEditingListId = listId;
-  currentEditingListName = currentName;
-  
-  // Set up modal
-  const modal = document.getElementById("editListNameModal");
-  const input = document.getElementById("newName");
-  
-  input.value = currentName;
-  modal.classList.remove("hidden");
-  
-  setTimeout(() => input.focus(), 50);
-};
+  let currentDeletingListId = null;
+  window.openDeleteListModal = function (listId) {
+    currentDeletingListId = listId;
+    const modal = document.getElementById("deleteListModal");
+    modal.classList.remove("hidden");
+  };
 
+
+// ADD MEMBERS MODAL HANDLERS
 document.addEventListener("DOMContentLoaded", () => {
   const addMembersModal = document.getElementById("addMembersModal");
   const addMembersForm = document.getElementById("addMembersForm");
@@ -1146,57 +1161,51 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Error adding member, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
     }
   });
+});
 
-  const editListNameModal = document.getElementById("editListNameModal");
-  const editListNameForm = document.getElementById("editListNameForm");
-  const cancelEditListNameBtn = document.getElementById("cancelEditListNameBtn");
+// DELETE LIST MODAL HANDLERS
+document.addEventListener("DOMContentLoaded", () => {
+  const deleteListModal = document.getElementById("deleteListModal");
+  const deleteListForm = document.getElementById("deleteListForm");
+  const cancelDeleteListBtn = document.getElementById("cancelDeleteListBtn");
   
-  cancelEditListNameBtn.addEventListener("click", () => {
-    editListNameModal.classList.add("hidden");
-    currentEditingListId = null;
-    currentEditingListName = null;
+  cancelDeleteListBtn.addEventListener("click", () => {
+    deleteListModal.classList.add("hidden");
+    currentDeletingListId = null;
   });
 
-  editListNameForm.addEventListener("submit", async (e) => {
+  deleteListForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const newName = document.getElementById("newName").value.trim();
     
-    // Validation
-    if (!newName) {
-      showToast("✘ List name cannot be empty");
-      return;
-    }
-    if (newName === currentEditingListName) {
-      showToast("Same name?");
+    if (!currentDeletingListId) {
+      showToast("No list selected for deletion", "#ef8e8e");
       return;
     }
     
     try {
-      const res = await fetch(`/collab-lists/${currentEditingListId}`, {
-        method: "PATCH",
+      const res = await fetch(`/collab-lists/${currentDeletingListId}`, {
+        method: "DELETE",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ name: newName }),
       });
       
       if (res.ok) {
-        showToast("✓ List name updated successfully! ⋆⭒˚", "#32AA0E");
-        editListNameModal.classList.add("hidden");
-        await loadSidebarData();
-        if (isCollabMode && currentCollabListId === parseInt(currentEditingListId)) {
-          const titleToggle = document.getElementById("titleToggle");
-          if (titleToggle) {
-            titleToggle.textContent = `pahuwaii : 3 - ${newName}`;
-          }
+        deleteListModal.classList.add("hidden");
+        
+        // If viewing the deleted list, go back to personal
+        if (isCollabMode && currentCollabListId === currentDeletingListId) {
+          await handleSelectPersonalList();
         }
-        currentEditingListId = null;
-        currentEditingListName = null;
+        
+        currentDeletingListId = null;
+        await loadSidebarData();
+        showToast("🗑 Collaborative list deleted!");
       } else {
         const data = await res.json();
-        showToast(data.error || "✘ Failed to update list name", "#ef8e8e");
+        showToast(data.error || "Failed to delete list (°ロ°)", "#ef8e8e");
       }
     } catch (err) {
-      console.error("Error updating list name:", err);
-      showToast("✘ Error updating list name, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+      console.error("Error deleting list:", err);
+      showToast("Error deleting list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
     }
   });
 });
