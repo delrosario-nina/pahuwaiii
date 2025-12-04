@@ -298,6 +298,44 @@ app.post("/collab-lists", verifyToken, (req, res) => {
   );
 });
 
+app.patch("/collab-lists/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  
+  // Validate name
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "✘ List name cannot be empty" });
+  }
+  
+  // Check if user owns the list
+  db.get(
+    "SELECT * FROM collab_lists WHERE id = ? AND owner_id = ?",
+    [id, req.userId],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list) {
+        return res.status(403).json({ error: "✘ Only owner can rename list" });
+      }
+      
+      // Update the list name
+      db.run(
+        "UPDATE collab_lists SET name = ? WHERE id = ?",
+        [name.trim(), id],
+        function (updateErr) {
+          if (updateErr) {
+            return res.status(500).json({ error: updateErr.message });
+          }
+          res.json({ 
+            success: true, 
+            name: name.trim(),
+            updated: this.changes 
+          });
+        }
+      );
+    }
+  );
+});
+
 // Get members of a collaborative list
 app.get("/collab-lists/:id/members", verifyToken, (req, res) => {
   const { id } = req.params;

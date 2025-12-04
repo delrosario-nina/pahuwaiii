@@ -153,7 +153,7 @@ function showToast(message, bgColor = "#7c69bd", taskId = null, duration = 3000)
   activeToasts.add(key);
 
   const toastElement = document.createElement("div");
-  toastElement.className = `fixed z-[9999] right-10 transform -translate-x-0 text-white text-lg px-4 py-2 rounded-lg shadow-lg`;
+  toastElement.className = `fixed z-[9999] left-1/2 transform -translate-x-1/2 text-white text-lg px-4 py-2 rounded-lg shadow-lg`;
   toastElement.textContent = message;
   toastElement.style.backgroundColor = bgColor;
   toastElement.style.setProperty("background-color", bgColor, "important");
@@ -326,21 +326,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const due_time = document.getElementById("due_time").value;
     const priority = document.getElementById("priority").value;
 
-    // Validation
-    if (!name) {
-      showToast("Needs task name");
-      return;
-    }
-    if (!due_date) {
-      showToast("Please select its due date");
-      return;
-    }
-    if (!due_time) {
-      showToast("Please select its due time");
-      return;
-    }
-    if (!priority) {
-      showToast("Needs task priority");
+    // Validations
+    if (!name || !due_date || !due_time || !priority) {
+      showToast("✘ Please fill in all fields", "#ef8e8e");
       return;
     }
 
@@ -584,13 +572,13 @@ function createTaskCard(task) {
     <div class="flex flex-wrap items-center gap-2 text-xs mt-1">
       <input type="date" value="${task.due_date || ""}" 
             class="border p-0.5 text-[10px] rounded w-[7em]"
-            onchange="updateTaskField(${task.id}, 'due_date', this.value)" />
+            onchange="updateTaskFieldWithValidation(${task.id}, 'due_date', this.value, this)" />
       <input type="time" value="${task.due_time || ""}" 
             class="border p-0.5 text-[10px] rounded w-[7em]"
-            onchange="updateTaskField(${task.id}, 'due_time', this.value)" />
+            onchange="updateTaskFieldWithValidation(${task.id}, 'due_time', this.value, this)" />
       <select id="status_sel_${task.id}" 
-              class="border p-0.5 text-[10px] rounded bg-[#EAE9ED] text-black"
-              onchange="updateTaskField(${task.id}, 'status', this.value)">
+            class="border p-0.5 text-[10px] rounded bg-[#EAE9ED] text-black"
+            onchange="updateTaskField(${task.id}, 'status', this.value)">
         <option value="to do" ${
           task.status === "to do" ? "selected" : ""
         }>To Do</option>
@@ -688,6 +676,49 @@ window.updateTaskField = async function (id, field, value) {
     await fetchCollabTasks(currentCollabListId);
   } else {
     await fetchTasks();
+  }
+};
+
+// Update task field with validation (for date and time fields)
+window.updateTaskFieldWithValidation = async function (id, field, value, inputElement) {
+  // Prevent empty/null values for date and time
+  if (!value || value.trim() === "") {
+    showToast(`⚠︎ ${field === 'due_date' ? 'Due date' : 'Due time'} cannot be empty`, "#ef8e8e");
+    // Revert to previous value
+    const task = allTasks.find((t) => t.id === id);
+    if (task && inputElement) {
+      inputElement.value = task[field] || "";
+    }
+    return;
+  }
+
+  const endpoint = isCollabMode ? `/collab-tasks/${id}` : `/tasks/${id}`;
+  
+  try {
+    const res = await fetch(endpoint, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ [field]: value }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Update failed");
+    }
+
+    if (isCollabMode) {
+      await fetchCollabTasks(currentCollabListId);
+    } else {
+      await fetchTasks();
+    }
+  } catch (err) {
+    console.error("Error updating task field:", err);
+    showToast("⚠︎ Failed to update task", "#ef8e8e");
+    
+    // Revert to previous value on error
+    const task = allTasks.find((t) => t.id === id);
+    if (task && inputElement) {
+      inputElement.value = task[field] || "";
+    }
   }
 };
 
@@ -883,10 +914,10 @@ async function renderSidebar(lists) {
           <div class="flex items-center gap-2">
             <button 
               class="text-xs text-gray-600 hover:text-black"
-              onclick="editCollabListName('${list.id}', '${escapeHtml(
-        list.name
-      )}'); event.stopPropagation();"
-              title="Edit List Name">✎</button>
+              onclick="openListNameModal('${
+                list.id
+              }'); event.stopPropagation();"
+              title="Edit Collaborative List Name">✎</button>
             <button
               class="text-xs text-blue-600 hover:text-blue-800"
               onclick="openAddMembersModal('${
@@ -958,14 +989,6 @@ function getCurrentUserId() {
     return null;
   }
 }
-
-// Edit collaborative list name
-window.editCollabListName = function (listId, currentName) {
-  const newName = prompt("Enter new list name:", currentName);
-  if (newName && newName !== currentName) {
-    showToast("List name update feature to be added teehee");
-  }
-};
 
 // Create collaborative list
 async function createCollabList(name) {
@@ -1052,6 +1075,28 @@ window.openAddMembersModal = function (listId) {
   document.getElementById("memberEmails").focus();
 };
 
+let currentEditingListId = null;
+let currentEditingListName = null;
+window.openListNameModal = function (listId) {
+  const listElement = document.querySelector(`[data-list-id="${listId}"]`);
+  if (!listElement) return;
+  
+  const currentName = listElement.querySelector('.font-semibold').textContent.trim();
+  
+  // Store current values
+  currentEditingListId = listId;
+  currentEditingListName = currentName;
+  
+  // Set up modal
+  const modal = document.getElementById("editListNameModal");
+  const input = document.getElementById("newName");
+  
+  input.value = currentName;
+  modal.classList.remove("hidden");
+  
+  setTimeout(() => input.focus(), 50);
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   const addMembersModal = document.getElementById("addMembersModal");
   const addMembersForm = document.getElementById("addMembersForm");
@@ -1099,6 +1144,59 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (err) {
       console.error("Error adding member:", err);
       showToast("Error adding member, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+    }
+  });
+
+  const editListNameModal = document.getElementById("editListNameModal");
+  const editListNameForm = document.getElementById("editListNameForm");
+  const cancelEditListNameBtn = document.getElementById("cancelEditListNameBtn");
+  
+  cancelEditListNameBtn.addEventListener("click", () => {
+    editListNameModal.classList.add("hidden");
+    currentEditingListId = null;
+    currentEditingListName = null;
+  });
+
+  editListNameForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const newName = document.getElementById("newName").value.trim();
+    
+    // Validation
+    if (!newName) {
+      showToast("✘ List name cannot be empty");
+      return;
+    }
+    if (newName === currentEditingListName) {
+      showToast("Same name?");
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/collab-lists/${currentEditingListId}`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: newName }),
+      });
+      
+      if (res.ok) {
+        showToast("✓ List name updated successfully! ⋆⭒˚", "#32AA0E");
+        editListNameModal.classList.add("hidden");
+        await loadSidebarData();
+        if (isCollabMode && currentCollabListId === parseInt(currentEditingListId)) {
+          const titleToggle = document.getElementById("titleToggle");
+          if (titleToggle) {
+            titleToggle.textContent = `pahuwaii : 3 - ${newName}`;
+          }
+        }
+        currentEditingListId = null;
+        currentEditingListName = null;
+      } else {
+        const data = await res.json();
+        showToast(data.error || "✘ Failed to update list name", "#ef8e8e");
+      }
+    } catch (err) {
+      console.error("Error updating list name:", err);
+      showToast("✘ Error updating list name, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
     }
   });
 });

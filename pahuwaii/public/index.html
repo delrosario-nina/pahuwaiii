@@ -331,7 +331,7 @@
         <h2 class="text-2xl kanban-title font-bold mb-4">
           Create New Collaborative List
         </h2>
-        <form id="createListForm" class="grid grid-cols-1 gap-3">
+        <form id="createListForm" class="grid grid-cols-1 gap-3" novalidate>
           <input
             type="text"
             id="newListName"
@@ -357,6 +357,42 @@
         </form>
       </div>
     </div>
+
+      <!-- CHANGE LIST NAME MODAL -->
+    <div 
+      id="editListNameModal"
+      class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+        <h2 class="text-2xl kanban-title font-bold mb-4">
+          Change Collaborative List Name
+        </h2>
+        <form id="editListNameForm" class="grid grid-cols-1 gap-3" novalidate>
+          <input
+            type="text"
+            id="newName" 
+            placeholder="New collab list name" 
+            required 
+            class="border p-2 rounded">
+          <div class="flex justify-end gap-2 mt-4">
+            <button
+              type="button"
+              id="cancelEditListNameBtn"
+              class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded"
+            >
+              Change name
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- ADD MEMBERS MODAL -->
     <div
       id="addMembersModal"
