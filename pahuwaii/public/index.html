@@ -80,9 +80,17 @@
         <div class="mb-4">
           <button
             id="myListBtn"
-            class="w-full text-left px-4 py-2 bg-white hover:bg-blue-200 border border-gray-600 rounded mb-2"
+            class="w-full text-left px-4 py-2 bg-white hover:bg-gray-100 border border-gray-600 rounded flex items-center justify-between"
           >
-            My Personal List
+            <span class="flex-1">My Personal List</span>
+            <span
+              id="editPersonalListBtn"
+              class="ml-2 text-gray-600 hover:text-black text-lg flex-shrink-0 cursor-pointer"
+              title="Edit Personal List Name"
+              onclick="event.stopPropagation(); openEditPersonalListModal()"
+            >
+              ✎
+            </span>
           </button>
         </div>
 
@@ -144,9 +152,9 @@
       <div
         class="flex flex-col md:flex-row gap-4 flex-1 p-4 md:p-6 min-h-0 overflow-auto md:overflow-visible"
       >
-        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+        <div class="flex-1 md:flex-1 min-w-0">
           <div
-            class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+            class="bg-[#FFEEEE] border-2 border-black p-4 flex flex-col h-full rounded min-h-[300px]"
           >
             <h2 class="font-bold text-xl kanban-title mb-4 text-black">
               To Do
@@ -158,9 +166,9 @@
           </div>
         </div>
 
-        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+        <div class="flex-1 md:flex-1 min-w-0">
           <div
-            class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+            class="bg-[#FFFEEB] border-2 border-black p-4 flex flex-col h-full rounded min-h-[300px]"
           >
             <h2 class="font-bold text-xl kanban-title mb-4 text-black">
               In Progress
@@ -172,9 +180,9 @@
           </div>
         </div>
 
-        <div class="flex-1 md:max-w-[33%] min-w-0 md:min-h-0">
+        <div class="flex-1 md:flex-1 min-w-0">
           <div
-            class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full md:h-[calc(100vh-300px)] rounded min-h-[300px]"
+            class="bg-[#F0FDEC] border-2 border-black p-4 flex flex-col h-full rounded min-h-[300px]"
           >
             <h2 class="font-bold text-xl kanban-title mb-4 text-black">Done</h2>
             <div
@@ -359,8 +367,8 @@
       </div>
     </div>
 
-      <!-- CHANGE LIST NAME MODAL -->
-    <div 
+    <!-- CHANGE LIST NAME MODAL -->
+    <div
       id="editListNameModal"
       class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50"
     >
@@ -371,10 +379,11 @@
         <form id="editListNameForm" class="grid grid-cols-1 gap-3" novalidate>
           <input
             type="text"
-            id="newName" 
-            placeholder="New collab list name" 
-            required 
-            class="border p-2 rounded">
+            id="newName"
+            placeholder="New collab list name"
+            required
+            class="border p-2 rounded"
+          />
           <div class="flex justify-end gap-2 mt-4">
             <button
               type="button"
