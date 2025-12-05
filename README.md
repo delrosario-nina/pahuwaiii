@@ -120,18 +120,7 @@ c) **Database** - Sqlite &emsp; &emsp; &emsp; &emsp; &emsp; : easier learing cur
 - drag to change status
 
 
-## Laboratory Tracking
-### Lab 1
-- to do list (TDLs)
-### Lab 2
-- account creation (sign-up)
-    - username and email
-    - password
-    - question and answer for password recovery (who is the cutest pokemon of all time)
-    - name of user 
-        - max of 20 characters
-    - security back-up question
-### Lab 3
-- integration of labs 1 and 2
-- user can only access their own TDL
-- data persistence
+# Deployment
+
+1) Frontend
+2) Backend 
