@@ -67,6 +67,10 @@ function handleSelectCollabList(list) {
     isCollabMode = true;
     currentCollabListId = list.id;
 
+    // Persist the selection
+    localStorage.setItem("currentListMode", "collab");
+    localStorage.setItem("currentCollabListId", list.id);
+
     allTasks = [];
     renderBoard();
 
@@ -92,6 +96,10 @@ async function handleSelectPersonalList() {
   isCollabMode = false;
   currentCollabListId = null;
 
+  // Persist the selection
+  localStorage.setItem("currentListMode", "personal");
+  localStorage.removeItem("currentCollabListId");
+
   allTasks = [];
   renderBoard();
 
@@ -102,8 +110,11 @@ async function handleSelectPersonalList() {
     console.error("Failed fetching personal tasks:", err);
   }
 
+  const userId = getCurrentUserId();
+  const listName =
+    localStorage.getItem(`personalListName_${userId}`) || "My Personal List";
   const titleToggle = document.getElementById("titleToggle");
-  if (titleToggle) titleToggle.textContent = "pahuwaii : 3 - My Personal List";
+  if (titleToggle) titleToggle.textContent = `pahuwaii : 3 - ${listName}`;
 
   document.getElementById("sidebar").classList.add("-translate-x-full");
   document.getElementById("sidebarOverlay").classList.add("hidden");
@@ -118,31 +129,103 @@ function updateListSelection(selectedId) {
   );
 
   // Reset all styles
-  myListBtn.classList.remove("bg-blue-500", "text-white", "font-bold");
-  myListBtn.classList.add("bg-blue-100");
+  myListBtn.style.backgroundColor = "";
+  myListBtn.style.color = "";
+  myListBtn.classList.remove("font-bold");
+  myListBtn.classList.add("hover:bg-gray-100");
 
   collabListItems.forEach((item) => {
-    item.classList.remove("bg-blue-500", "text-white", "font-bold");
+    item.style.backgroundColor = "";
+    item.style.color = "";
+    item.classList.remove("font-bold");
     item.classList.add("hover:bg-gray-100", "border-gray-300");
   });
 
-  // Apply selected styles
+  // Apply selected styles with custom color #CCB3E5
   if (selectedId === "personal") {
-    myListBtn.classList.remove("bg-blue-100");
-    myListBtn.classList.add("bg-blue-500", "text-white", "font-bold");
+    myListBtn.style.backgroundColor = "#CCB3E5";
+    myListBtn.style.color = "#000000";
+    myListBtn.classList.add("font-bold");
+    myListBtn.classList.remove("hover:bg-gray-100");
   } else {
     const selectedList = document.querySelector(
       `#collabListsContainer > div[data-list-id="${selectedId}"]`
     );
     if (selectedList) {
+      selectedList.style.backgroundColor = "#CCB3E5";
+      selectedList.style.color = "#000000";
+      selectedList.classList.add("font-bold");
       selectedList.classList.remove("hover:bg-gray-100", "border-gray-300");
-      selectedList.classList.add("bg-blue-500", "text-white", "font-bold");
     }
   }
 }
+
+// Toast notification for alerts / errors
+const activeToasts = new Set();
+const activeToastElements = [];
+
+function showToast(
+  message,
+  bgColor = "#7c69bd",
+  taskId = null,
+  duration = 3000
+) {
+  // unique key foreach task
+  const key = taskId ? `${taskId}:${message}` : message;
+  // prevent duplicate toasts
+  if (activeToasts.has(key)) return;
+  activeToasts.add(key);
+
+  const toastElement = document.createElement("div");
+  toastElement.className = `fixed z-[9999] left-1/2 transform -translate-x-1/2 text-white text-lg px-4 py-2 rounded-lg shadow-lg`;
+  toastElement.textContent = message;
+  toastElement.style.backgroundColor = bgColor;
+  toastElement.style.setProperty("background-color", bgColor, "important");
+  toastElement.style.transition = "opacity 300ms, bottom 300ms ease-in-out";
+
+  // multiple toasts
+  const offset = document.querySelectorAll(".toastElement").length * 60;
+  toastElement.style.bottom = `${60 + offset}px`;
+  toastElement.classList.add("toastElement");
+  document.body.appendChild(toastElement);
+  activeToastElements.push(toastElement);
+
+  // fade in - fade out
+  setTimeout(() => {
+    toastElement.style.opacity = "1";
+  }, 10);
+  setTimeout(() => {
+    toastElement.style.opacity = "0";
+    setTimeout(() => {
+      toastElement.remove();
+      activeToasts.delete(key);
+      // Remove from tracking array
+      const index = activeToastElements.indexOf(toastElement);
+      if (index > -1) {
+        activeToastElements.splice(index, 1);
+      }
+      // Reposition remaining toasts
+      repositionToasts();
+    }, 300);
+  }, duration);
+}
+
+function repositionToasts() {
+  activeToastElements.forEach((toast, index) => {
+    const newBottom = 60 + index * 60;
+    toast.style.bottom = `${newBottom}px`;
+  });
+}
+
 async function loadUserProfilePicture() {
   const token = localStorage.getItem("authToken");
   if (!token) return;
+
+  const headerProfilePic = document.getElementById("headerProfilePic");
+  // hides pfp to prevent change flash
+  if (headerProfilePic) {
+    headerProfilePic.style.opacity = "0";
+  }
 
   // Try to get local persisted avatar first so UI updates instantly
   try {
@@ -150,9 +233,9 @@ async function loadUserProfilePicture() {
     const uid = decoded.user_id || decoded.id;
     if (uid) {
       const saved = localStorage.getItem(`profilePic_${uid}`);
-      if (saved) {
-        const headerProfilePic = document.getElementById("headerProfilePic");
-        if (headerProfilePic) headerProfilePic.src = saved;
+      if (saved && headerProfilePic) {
+        headerProfilePic.src = saved;
+        headerProfilePic.style.opacity = "1";
       }
     }
   } catch (err) {
@@ -171,16 +254,23 @@ async function loadUserProfilePicture() {
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.profile_picture) {
-      const headerProfilePic = document.getElementById("headerProfilePic");
-      if (headerProfilePic) headerProfilePic.src = data.profile_picture;
+      if (headerProfilePic) {
+        headerProfilePic.src = data.profile_picture;
+        headerProfilePic.style.opacity = "1";
+      }
       try {
         const uid2 = data.id || data.user_id;
         if (uid2)
           localStorage.setItem(`profilePic_${uid2}`, data.profile_picture);
       } catch (e) {}
+    } else if (headerProfilePic && headerProfilePic.style.opacity === "0") {
+      // No profile picture from server and no cached version, show default
+      headerProfilePic.style.opacity = "1";
     }
   } catch (err) {
     console.error("Error loading profile picture:", err);
+    // On error, still show whatever is there (cached or default)
+    if (headerProfilePic) headerProfilePic.style.opacity = "1";
   }
 }
 
@@ -259,13 +349,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   taskForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const task = {
-      name: document.getElementById("name").value,
-      due_date: document.getElementById("due_date").value || null,
-      due_time: document.getElementById("due_time").value || null,
-      priority: document.getElementById("priority").value,
-      status: "to do",
-    };
+    const name = document.getElementById("name").value.trim();
+    const due_date = document.getElementById("due_date").value;
+    const due_time = document.getElementById("due_time").value;
+    const priority = document.getElementById("priority").value;
+
+    // Validations
+    if (!name || !due_date || !due_time || !priority) {
+      showToast("✘ Please fill in all fields", "#ef8e8e");
+      return;
+    }
+
+    const task = { name, due_date, due_time, priority, status: "to do" };
 
     const url = isCollabMode
       ? `/collab-lists/${currentCollabListId}/tasks`
@@ -288,11 +383,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       } else {
         const data = await res.json();
-        alert(data.error || "Failed to add task");
+        showToast(data.error || "⚠︎ Couldn't add task (＠_＠;)", "#ef8e8e");
       }
     } catch (err) {
       console.error("Error adding task:", err);
-      alert("Error adding task");
+      showToast("⚠︎ Error adding task...", "#ef8e8e");
     }
   });
 
@@ -368,11 +463,289 @@ document.addEventListener("DOMContentLoaded", async () => {
   const myListBtn = document.getElementById("myListBtn");
   myListBtn.addEventListener("click", handleSelectPersonalList);
 
+  // Setup edit personal list button
+  const editPersonalListBtn = document.getElementById("editPersonalListBtn");
+  if (editPersonalListBtn) {
+    editPersonalListBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openEditPersonalListModal();
+    });
+  }
+
+  // Load saved personal list name
+  const userId = getCurrentUserId();
+  if (userId) {
+    const savedPersonalListName = localStorage.getItem(
+      `personalListName_${userId}`
+    );
+    if (savedPersonalListName) {
+      const textSpan = myListBtn.querySelector("span:first-child");
+      if (textSpan) textSpan.textContent = savedPersonalListName;
+    }
+  }
+
   // Load sidebar data
   await loadSidebarData();
 
-  // Load initial tasks
-  await fetchTasks();
+  // Restore the previous list selection
+  const savedListMode = localStorage.getItem("currentListMode");
+  if (savedListMode === "collab") {
+    const collabListId = localStorage.getItem("currentCollabListId");
+    if (collabListId) {
+      // Find the list object from sidebar data
+      const res = await fetch("/collab-lists", {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const lists = await res.json();
+        const list = lists.find((l) => String(l.id) === String(collabListId));
+        if (list) {
+          // Call the handler to restore the collab list
+          await handleSelectCollabList(list)();
+        } else {
+          // List not found, load personal list
+          await fetchTasks();
+        }
+      } else {
+        // Fallback to personal list
+        await fetchTasks();
+      }
+    } else {
+      // No collab list ID stored, load personal list
+      await fetchTasks();
+    }
+  } else {
+    // Load personal list by default
+    await fetchTasks();
+    // Update title with personal list name
+    const currentUserId = getCurrentUserId();
+    if (currentUserId) {
+      const savedPersonalListName =
+        localStorage.getItem(`personalListName_${currentUserId}`) ||
+        "My Personal List";
+      const titleToggle = document.getElementById("titleToggle");
+      if (titleToggle) {
+        titleToggle.textContent = `pahuwaii : 3 - ${savedPersonalListName}`;
+      }
+    }
+  }
+
+  // ===== CREATE COLLABORATIVE LIST MODAL HANDLERS =====
+  const createListModal = document.getElementById("createListModal");
+  const createListForm = document.getElementById("createListForm");
+  const newListNameInput = document.getElementById("newListName");
+  const cancelCreateListBtn = document.getElementById("cancelCreateListBtn");
+  const createListBtn = document.getElementById("createListBtn");
+
+  // Show modal on button click
+  createListBtn.addEventListener("click", () => {
+    createListModal.classList.remove("hidden");
+    createListForm.reset();
+    setTimeout(() => {
+      newListNameInput.focus();
+    }, 60);
+  });
+
+  // Hide modal on cancel
+  cancelCreateListBtn.addEventListener("click", () => {
+    createListModal.classList.add("hidden");
+  });
+
+  // Handle form submit to create new list
+  createListForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = newListNameInput.value.trim();
+    if (!name) {
+      showToast("Please enter a list name");
+      return;
+    }
+    try {
+      const res = await fetch("/collab-lists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + authToken,
+        },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        createListModal.classList.add("hidden");
+        await loadSidebarData();
+        showToast("[+𖠋] Collaborative list added !");
+      } else {
+        const data = await res.json();
+        showToast("Failed to create list (°ロ°)", "#ef8e8e");
+      }
+    } catch (err) {
+      console.error("Error creating list:", err);
+      showToast("Error creating list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+    }
+  });
+
+  // ===== ADD MEMBERS MODAL HANDLERS =====
+  const addMembersModal = document.getElementById("addMembersModal");
+  const addMembersForm = document.getElementById("addMembersForm");
+  const cancelAddMembersBtn = document.getElementById("cancelAddMembersBtn");
+
+  cancelAddMembersBtn.addEventListener("click", () => {
+    addMembersModal.classList.add("hidden");
+    currentListForMemberAdd = null;
+  });
+
+  addMembersForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const email = document.getElementById("memberEmails").value.trim();
+
+    if (!email) {
+      showToast("Add your email address");
+      return;
+    }
+
+    if (!currentListForMemberAdd) {
+      showToast("Select a list first");
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `/collab-lists/${currentListForMemberAdd}/members`,
+        {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      if (res.ok) {
+        showToast("[ +𖠋 Added Member ! ]");
+        addMembersModal.classList.add("hidden");
+        currentListForMemberAdd = null;
+        await loadSidebarData();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to add member (°ロ°)", "#ef8e8e");
+      }
+    } catch (err) {
+      console.error("Error adding member:", err);
+      showToast("Error adding member, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+    }
+  });
+
+  // ===== DELETE LIST MODAL HANDLERS =====
+  const deleteListModal = document.getElementById("deleteListModal");
+  const deleteListForm = document.getElementById("deleteListForm");
+  const cancelDeleteListBtn = document.getElementById("cancelDeleteListBtn");
+
+  cancelDeleteListBtn.addEventListener("click", () => {
+    deleteListModal.classList.add("hidden");
+    currentDeletingListId = null;
+  });
+
+  deleteListForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    if (!currentDeletingListId) {
+      showToast("No list selected for deletion", "#ef8e8e");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/collab-lists/${currentDeletingListId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (res.ok) {
+        deleteListModal.classList.add("hidden");
+
+        // If viewing the deleted list, go back to personal
+        if (isCollabMode && currentCollabListId === currentDeletingListId) {
+          await handleSelectPersonalList();
+        }
+
+        currentDeletingListId = null;
+        await loadSidebarData();
+        showToast("🗑 Collaborative list deleted!");
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Failed to delete list (°ロ°)", "#ef8e8e");
+      }
+    } catch (err) {
+      console.error("Error deleting list:", err);
+      showToast("Error deleting list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+    }
+  });
+
+  // ===== EDIT LIST NAME MODAL - Handles both personal and collaborative lists =====
+  const editListNameModal = document.getElementById("editListNameModal");
+  const editListNameForm = document.getElementById("editListNameForm");
+  const cancelEditListNameBtn = document.getElementById(
+    "cancelEditListNameBtn"
+  );
+
+  if (cancelEditListNameBtn) {
+    cancelEditListNameBtn.addEventListener("click", () => {
+      editListNameModal.classList.add("hidden");
+      currentEditingListId = null;
+      isEditingPersonalList = false;
+    });
+  }
+
+  if (editListNameForm) {
+    editListNameForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const newName = document.getElementById("newName").value.trim();
+
+      if (!newName) {
+        showToast("Please enter a name", "#ef8e8e");
+        return;
+      }
+
+      try {
+        if (isEditingPersonalList) {
+          // Store personal list name in localStorage
+          const currentUserId = getCurrentUserId();
+          if (currentUserId) {
+            localStorage.setItem(`personalListName_${currentUserId}`, newName);
+            const titleToggle = document.getElementById("titleToggle");
+            if (titleToggle) {
+              titleToggle.textContent = `pahuwaii : 3 - ${newName}`;
+            }
+            if (myListBtn) {
+              const textSpan = myListBtn.querySelector("span:first-child");
+              if (textSpan) textSpan.textContent = newName;
+            }
+            showToast("✓ Personal list name updated!");
+          }
+        } else {
+          // Update collaborative list name via API
+          const res = await fetch(`/collab-lists/${currentEditingListId}`, {
+            method: "PATCH",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ name: newName }),
+          });
+
+          if (res.ok) {
+            showToast("✓ List name updated!");
+            await loadSidebarData();
+          } else {
+            const data = await res.json();
+            showToast(data.error || "Failed to update list name", "#ef8e8e");
+          }
+        }
+
+        editListNameModal.classList.add("hidden");
+        currentEditingListId = null;
+        isEditingPersonalList = false;
+      } catch (err) {
+        console.error("Error updating list name:", err);
+        showToast("Error updating list name", "#ef8e8e");
+      }
+    });
+  }
 });
 
 // Fetch personal tasks
@@ -409,9 +782,11 @@ async function fetchCollabTasks(listId) {
       updateProgressBar();
     } else {
       console.error("Failed to fetch collab tasks");
+      showToast("⚠︎ Couldn't fetch collaborative tasks", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error fetching collab tasks:", err);
+    showToast("⚠︎ Error fetching collaborative tasks", "#ef8e8e");
   }
 }
 
@@ -503,13 +878,17 @@ function createTaskCard(task) {
     <div class="flex flex-wrap items-center gap-2 text-xs mt-1">
       <input type="date" value="${task.due_date || ""}" 
             class="border p-0.5 text-[10px] rounded w-[7em]"
-            onchange="updateTaskField(${task.id}, 'due_date', this.value)" />
+            onchange="updateTaskFieldWithValidation(${
+              task.id
+            }, 'due_date', this.value, this)" />
       <input type="time" value="${task.due_time || ""}" 
             class="border p-0.5 text-[10px] rounded w-[7em]"
-            onchange="updateTaskField(${task.id}, 'due_time', this.value)" />
+            onchange="updateTaskFieldWithValidation(${
+              task.id
+            }, 'due_time', this.value, this)" />
       <select id="status_sel_${task.id}" 
-              class="border p-0.5 text-[10px] rounded bg-[#EAE9ED] text-black"
-              onchange="updateTaskField(${task.id}, 'status', this.value)">
+            class="border p-0.5 text-[10px] rounded bg-[#EAE9ED] text-black"
+            onchange="updateTaskField(${task.id}, 'status', this.value)">
         <option value="to do" ${
           task.status === "to do" ? "selected" : ""
         }>To Do</option>
@@ -558,7 +937,7 @@ function createTaskCard(task) {
         await updateStatus(task.id, newStatus);
       } catch (err) {
         cb.checked = !cb.checked;
-        alert("Failed to update status: " + err.message);
+        showToast("⚠︎ Update Status Failed: " + err.message, "#ef8e8e");
       } finally {
         cb.disabled = false;
       }
@@ -580,6 +959,13 @@ async function updateStatus(id, status) {
     const txt = await res.text();
     throw new Error(txt || "Server error");
   }
+  if (status === "done") {
+    showToast(
+      "☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆",
+      "#32AA0E",
+      id
+    );
+  }
   if (isCollabMode) {
     await fetchCollabTasks(currentCollabListId);
   } else {
@@ -595,10 +981,70 @@ window.updateTaskField = async function (id, field, value) {
     headers: getAuthHeaders(),
     body: JSON.stringify({ [field]: value }),
   });
+
+  if (value === "done") {
+    showToast(
+      "☆*: .｡. o(≧▽≦)o Task completed! Great job! .｡.:*☆",
+      "#32AA0E",
+      id
+    );
+  }
+
   if (isCollabMode) {
     await fetchCollabTasks(currentCollabListId);
   } else {
     await fetchTasks();
+  }
+};
+
+// Update task field with validation (for date and time fields)
+window.updateTaskFieldWithValidation = async function (
+  id,
+  field,
+  value,
+  inputElement
+) {
+  // Prevent empty/null values for date and time
+  if (!value || value.trim() === "") {
+    showToast(
+      `⚠︎ ${field === "due_date" ? "Due date" : "Due time"} cannot be empty`,
+      "#ef8e8e"
+    );
+    // Revert to previous value
+    const task = allTasks.find((t) => t.id === id);
+    if (task && inputElement) {
+      inputElement.value = task[field] || "";
+    }
+    return;
+  }
+
+  const endpoint = isCollabMode ? `/collab-tasks/${id}` : `/tasks/${id}`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ [field]: value }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Update failed");
+    }
+
+    if (isCollabMode) {
+      await fetchCollabTasks(currentCollabListId);
+    } else {
+      await fetchTasks();
+    }
+  } catch (err) {
+    console.error("Error updating task field:", err);
+    showToast("⚠︎ Failed to update task", "#ef8e8e");
+
+    // Revert to previous value on error
+    const task = allTasks.find((t) => t.id === id);
+    if (task && inputElement) {
+      inputElement.value = task[field] || "";
+    }
   }
 };
 
@@ -655,11 +1101,11 @@ async function updateTask(taskId) {
         await fetchTasks();
       }
     } else {
-      alert("Failed to update task");
+      showToast("(°ロ°) Couldn't update task", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error updating task:", err);
-    alert("Error updating task");
+    showToast("Error updating task, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
@@ -794,16 +1240,22 @@ async function renderSidebar(lists) {
           <div class="flex items-center gap-2">
             <button 
               class="text-xs text-gray-600 hover:text-black"
-              onclick="editCollabListName('${list.id}', '${escapeHtml(
-        list.name
-      )}'); event.stopPropagation();"
-              title="Edit List Name">✎</button>
+              onclick="openListNameModal('${
+                list.id
+              }'); event.stopPropagation();"
+              title="Edit Collaborative List Name">✎</button>
             <button
               class="text-xs text-blue-600 hover:text-blue-800"
               onclick="openAddMembersModal('${
                 list.id
               }'); event.stopPropagation();"
               title="Manage Members">👥</button>
+            <button 
+              class="text-xs text-red-400 hover:text-red-700"
+              onclick="openDeleteListModal('${
+                list.id
+              }'); event.stopPropagation();"
+              title="Delete Collaborative List">🗑</button>
           </div>
         </div>
       `;
@@ -870,14 +1322,6 @@ function getCurrentUserId() {
   }
 }
 
-// Edit collaborative list name
-window.editCollabListName = function (listId, currentName) {
-  const newName = prompt("Enter new list name:", currentName);
-  if (newName && newName !== currentName) {
-    alert("List name update feature coming soon");
-  }
-};
-
 // Create collaborative list
 async function createCollabList(name) {
   try {
@@ -889,70 +1333,17 @@ async function createCollabList(name) {
 
     if (res.ok) {
       await loadSidebarData();
-      alert("Collaborative list created!");
+      showToast("⋆⭒˚ Collaborative list created ! 𖠋𖠋𖠋*.⋆");
     } else {
-      alert("Failed to create list");
+      showToast("Failed to create list (°ロ°)", "#ef8e8e");
     }
   } catch (err) {
     console.error("Error creating list:", err);
+    showToast("Error creating list, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const createListModal = document.getElementById("createListModal");
-  const createListForm = document.getElementById("createListForm");
-  const newListNameInput = document.getElementById("newListName");
-  const cancelCreateListBtn = document.getElementById("cancelCreateListBtn");
-  const createListBtn = document.getElementById("createListBtn"); // Your sidebar button
-
-  // Show modal on button click
-  createListBtn.addEventListener("click", () => {
-    createListModal.classList.remove("hidden");
-    createListForm.reset();
-    setTimeout(() => {
-      newListNameInput.focus();
-    }, 60);
-  });
-
-  // Hide modal on cancel
-  cancelCreateListBtn.addEventListener("click", () => {
-    createListModal.classList.add("hidden");
-  });
-
-  // Handle form submit to create new list
-  createListForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const name = newListNameInput.value.trim();
-    if (!name) {
-      alert("Please enter a list name");
-      return;
-    }
-    try {
-      const res = await fetch("/collab-lists", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + authToken,
-        },
-        body: JSON.stringify({ name }),
-      });
-      if (res.ok) {
-        createListModal.classList.add("hidden");
-        await loadSidebarData();
-        alert("Collaborative list created!");
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to create list");
-      }
-    } catch (err) {
-      console.error("Error creating list:", err);
-      alert("Error creating list");
-    }
-  });
-});
-
 let currentListForMemberAdd = null;
-
 window.openAddMembersModal = function (listId) {
   currentListForMemberAdd = listId;
   const addMembersModal = document.getElementById("addMembersModal");
@@ -962,56 +1353,60 @@ window.openAddMembersModal = function (listId) {
   document.getElementById("memberEmails").focus();
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  const addMembersModal = document.getElementById("addMembersModal");
-  const addMembersForm = document.getElementById("addMembersForm");
-  const cancelAddMembersBtn = document.getElementById("cancelAddMembersBtn");
+let currentEditingListId = null;
+let currentEditingListName = null;
+let isEditingPersonalList = false;
+window.openListNameModal = function (listId) {
+  const listElement = document.querySelector(`[data-list-id="${listId}"]`);
+  if (!listElement) return;
 
-  cancelAddMembersBtn.addEventListener("click", () => {
-    addMembersModal.classList.add("hidden");
-    currentListForMemberAdd = null;
-  });
+  const currentName = listElement
+    .querySelector(".font-semibold")
+    .textContent.trim();
 
-  addMembersForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
+  // Store current values
+  currentEditingListId = listId;
+  currentEditingListName = currentName;
+  isEditingPersonalList = false;
 
-    const email = document.getElementById("memberEmails").value.trim();
+  // Set up modal
+  const modal = document.getElementById("editListNameModal");
+  const input = document.getElementById("newName");
 
-    if (!email) {
-      alert("Please enter an email address.");
-      return;
-    }
+  input.value = currentName;
+  modal.classList.remove("hidden");
 
-    if (!currentListForMemberAdd) {
-      alert("No list selected.");
-      return;
-    }
+  setTimeout(() => input.focus(), 50);
+};
 
-    try {
-      const res = await fetch(
-        `/collab-lists/${currentListForMemberAdd}/members`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ email }), // Single email string here
-        }
-      );
+let currentDeletingListId = null;
+window.openDeleteListModal = function (listId) {
+  currentDeletingListId = listId;
+  const modal = document.getElementById("deleteListModal");
+  modal.classList.remove("hidden");
+};
 
-      if (res.ok) {
-        alert("Member added successfully");
-        addMembersModal.classList.add("hidden");
-        currentListForMemberAdd = null;
-        await loadSidebarData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Failed to add member");
-      }
-    } catch (err) {
-      console.error("Error adding member:", err);
-      alert("Error adding member");
-    }
-  });
-});
+function openEditPersonalListModal() {
+  const userId = getCurrentUserId();
+  const savedName =
+    localStorage.getItem(`personalListName_${userId}`) || "My Personal List";
+
+  currentEditingListId = null;
+  currentEditingListName = savedName;
+  isEditingPersonalList = true;
+
+  const modal = document.getElementById("editListNameModal");
+  const input = document.getElementById("newName");
+  const heading = modal.querySelector("h2");
+
+  heading.textContent = "Edit Personal List Name";
+  input.value = savedName;
+  modal.classList.remove("hidden");
+
+  setTimeout(() => input.focus(), 50);
+}
+
+window.openEditPersonalListModal = openEditPersonalListModal;
 
 // --- Drag & Drop: allow dragging tasks between columns ---
 function allowDrop(e) {

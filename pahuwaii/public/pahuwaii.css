@@ -41,6 +41,10 @@ body {
   display: none;
 }
 
+.toastElement {
+  z-index: 2147483647; 
+  isolation: isolate;
+}
 
 /* NIGHT MODE */
 

@@ -49,7 +49,7 @@ db.serialize(() => {
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       bio TEXT NOT NULL DEFAULT 'insert bio here',
-      profile_picture TEXT DEFAULT 'avatar1.png',
+      profile_picture TEXT DEFAULT 'profile-icons/user-modified.png',
       reset_token TEXT,
       reset_token_expiry INTEGER,
       created_at TEXT DEFAULT (datetime('now'))
@@ -298,6 +298,67 @@ app.post("/collab-lists", verifyToken, (req, res) => {
   );
 });
 
+// Update collaborative list name if owner
+app.patch("/collab-lists/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  
+  // Validate name
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "✘ List name cannot be empty" });
+  }
+  
+  // Check if user owns the list
+  db.get(
+    "SELECT * FROM collab_lists WHERE id = ? AND owner_id = ?",
+    [id, req.userId],
+    (err, list) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!list) {
+        return res.status(403).json({ error: "✘ Only owner can rename list" });
+      }
+      
+      // Update the list name
+      db.run(
+        "UPDATE collab_lists SET name = ? WHERE id = ?",
+        [name.trim(), id],
+        function (updateErr) {
+          if (updateErr) {
+            return res.status(500).json({ error: updateErr.message });
+          }
+          res.json({ 
+            success: true, 
+            name: name.trim(),
+            updated: this.changes 
+          });
+        }
+      );
+    }
+  );
+});
+
+// Delete collaborative list
+app.delete("/collab-lists/:id", verifyToken, (req, res) => {
+  const { id } = req.params;
+
+  // Only delete lists owned by the logged-in user
+  const sql = `
+    DELETE FROM collab_lists
+    WHERE id = ? AND owner_id = ?
+  `;
+
+  db.run(sql, [id, req.userId], function (err) {
+    if (err) {
+      console.error("Error deleting list:", err);
+      return res.status(500).json({ error: "Failed to delete list" });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "List not found or not yours" });
+    }
+    res.json({ success: true, message: "List deleted" });
+  });
+});
+
 // Get members of a collaborative list
 app.get("/collab-lists/:id/members", verifyToken, (req, res) => {
   const { id } = req.params;
@@ -537,40 +598,57 @@ app.delete("/collab-tasks/:id", verifyToken, (req, res) => {
 // ========== USER AUTHENTICATION ==========
 
 app.post("/signup", (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "Missing fields" });
+  const { name, email, password, confirm_password} = req.body;
+  if (!name || !email || !password || !confirm_password) {
+    return res.status(400).json({ error: "Please fill in all fields" });
   }
-
+  if (password !== confirm_password) {
+    return res.status(400).json({ error: "✘ Passwords don't match" });
+  }
+  
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (user) return res.status(409).json({ error: "Email already in use" });
+    if (user) return res.status(409).json({ error: "✘ Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
+    const defaultProfilePic = "profile-icons/user-modified.png";
+
     db.run(
-      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-      [name, email, hashed],
+      "INSERT INTO users (name, email, password, profile_picture) VALUES (?, ?, ?, ?)",
+      [name, email, hashed, defaultProfilePic],
       function (insertErr) {
         if (insertErr)
           return res.status(500).json({ error: insertErr.message });
-        res.json({ id: this.lastID, name, email });
+        const userId = this.lastID;
+        // Generate JWT token
+        const token = jwt.sign({ user_id: userId }, JWT_SECRET, {
+          expiresIn: "7d",
+        });
+        res.json({
+          token,
+          user_id: userId,
+          name,
+          email,
+          bio: null, // or "" - new users don't have a bio yet
+          profile_picture: defaultProfilePic,
+        });
       }
     );
   });
 });
 
 app.post("/login", (req, res) => {
-  const { name, password } = req.body;
-  if (!name || !password) {
+  const { email, password } = req.body;
+  if (!email || !password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
 
-  db.get("SELECT * FROM users WHERE name = ?", [name], async (err, user) => {
+  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: "Server error" });
-    if (!user) return res.status(404).json({ error: "No such account found" });
+    if (!user) return res.status(404).json({ error: "Email not found (。_。;)" });
 
     const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ error: "Incorrect password" });
+    if (!match) return res.status(401).json({ error: "Sorry! Wrong password (。_。;)" });
 
     const token = jwt.sign({ user_id: user.id }, JWT_SECRET, {
       expiresIn: "1d",
