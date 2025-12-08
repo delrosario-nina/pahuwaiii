@@ -602,19 +602,36 @@ app.post("/signup", (req, res) => {
   if (!name || !email || !password || !confirm_password) {
     return res.status(400).json({ error: "Please fill in all fields" });
   }
-
+  if (password !== confirm_password) {
+    return res.status(400).json({ error: "✘ Passwords don't match" });
+  }
+  
   db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (user) return res.status(409).json({ error: "✘ Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
+    const defaultProfilePic = "profile-icons/user-modified.png";
+
     db.run(
-      "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-      [name, email, hashed],
+      "INSERT INTO users (name, email, password, profile_picture) VALUES (?, ?, ?, ?)",
+      [name, email, hashed, defaultProfilePic],
       function (insertErr) {
         if (insertErr)
           return res.status(500).json({ error: insertErr.message });
-        res.json({ id: this.lastID, name, email });
+        const userId = this.lastID;
+        // Generate JWT token
+        const token = jwt.sign({ user_id: userId }, JWT_SECRET, {
+          expiresIn: "7d",
+        });
+        res.json({
+          token,
+          user_id: userId,
+          name,
+          email,
+          bio: null, // or "" - new users don't have a bio yet
+          profile_picture: defaultProfilePic,
+        });
       }
     );
   });
