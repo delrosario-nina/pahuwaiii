@@ -512,6 +512,26 @@ async function handleSignup(e) {
     "signup_confirm_password"
   ).value;
 
+  if (!name || !email || !password || !confirm_password) {
+    showToast("✘ Please fill in all fields", "#ef8e8e");
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    showToast("✘ Please enter a valid email address", "#ef8e8e");
+    return;
+  }
+  if (password !== confirm_password) {
+    showToast("✘ Passwords don't match ✘", "#ef8e8e");
+    return;
+  }
+
+  const validation = validatePassword(password);
+  if (!validation.isValid) {
+    showToast(getPasswordErrorMessage(validation), "#ef8e8e");
+    return;
+  }
+
   try {
     const res = await fetch("/signup", {
       method: "POST",
@@ -519,38 +539,23 @@ async function handleSignup(e) {
       body: JSON.stringify({ name, email, password, confirm_password }),
     });
 
-    if (!name || !email || !password || !confirm_password) {
-      showToast("✘ Please fill in all fields", "#ef8e8e");
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      showToast("✘ Please enter a valid email address", "#ef8e8e");
-      return;
-    }
-    if (password !== confirm_password) {
-      showToast("✘ Passwords don't match ✘", "#ef8e8e");
-      return;
-    }
-
-    const validation = validatePassword(password);
-    if (!validation.isValid) {
-      showToast(getPasswordErrorMessage(validation), "#ef8e8e");
-      return;
-    }
-
     const data = await res.json();
 
     if (res.ok) {
-      showToast("Registered ! (ﾉ^ヮ^)ﾉ* Please login", "#32AA0E");
+      authToken = data.token;
+      localStorage.setItem("authToken", authToken);
+      sessionStorage.setItem("sessionUserId", data.user_id);
+      currentUser = {
+        id: data.user_id,
+        name: data.name,
+        email: data.email,
+        bio: data.bio,
+        profile_picture: data.profile_picture,
+      };
       signupForm.reset();
-      // Pre-fill login email and switch to login
-      setTimeout(() => {
-        document.getElementById("login_email").value = email; // ✅ Auto-fill email
-        activateLogin();
-        document.getElementById("login_password").focus(); // ✅ Focus password field
-      }, 500);
-      setTimeout(() => activateLogin(), 500);
+      // After login, go to the to-do list page
+      window.location.href = "/index.html";
+      showToast("Registered ! (ﾉ^ヮ^)ﾉ*", "#32AA0E");
     } else {
       showToast(data.error || "( °ㅁ° ) Registration failed", "#ef8e8e");
     }
