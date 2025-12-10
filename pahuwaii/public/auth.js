@@ -27,38 +27,43 @@ function showToast(message, bgColor = "#7c69bd", duration = 3000) {
   activeToasts.add(key);
 
   const toastElement = document.createElement("div");
-  toastElement.className = "fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 rounded-lg shadow-lg";
+  toastElement.className =
+    "fixed z-50 bottom-10 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 rounded-lg shadow-lg";
   toastElement.textContent = message;
   toastElement.style.backgroundColor = bgColor;
   toastElement.style.setProperty("background-color", bgColor, "important");
-  toastElement.style.transition = 'opacity 300ms, bottom 300ms ease-in-out';
+  toastElement.style.transition = "opacity 300ms, bottom 300ms ease-in-out";
 
   // multiple toasts
   const offset = document.querySelectorAll(".toastElement").length * 60;
   toastElement.style.bottom = `${60 + offset}px`;
   toastElement.classList.add("toastElement");
   document.body.appendChild(toastElement);
-  activeToastElements.push(toastElement); 
+  activeToastElements.push(toastElement);
 
   // fade in - fade out
-  setTimeout(() => { toastElement.style.opacity = '1'; }, 10);
   setTimeout(() => {
-    toastElement.style.opacity = '0';
+    toastElement.style.opacity = "1";
+  }, 10);
+  setTimeout(() => {
+    toastElement.style.opacity = "0";
     setTimeout(() => {
       toastElement.remove();
       activeToasts.delete(key);
       // Remove from tracking array
       const index = activeToastElements.indexOf(toastElement);
-      if (index > -1) { activeToastElements.splice(index, 1); }
+      if (index > -1) {
+        activeToastElements.splice(index, 1);
+      }
       // Reposition remaining toasts
       repositionToasts();
-    }, 300); 
+    }, 300);
   }, duration);
 }
 
 function repositionToasts() {
   activeToastElements.forEach((toast, index) => {
-    const newBottom = 60 + (index * 60);
+    const newBottom = 60 + index * 60;
     toast.style.bottom = `${newBottom}px`;
   });
 }
@@ -166,7 +171,9 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     // Transfer email from login to signup
     const loginEmail = document.getElementById("login_email").value;
-    if (loginEmail) { document.getElementById("signup_email").value = loginEmail; }
+    if (loginEmail) {
+      document.getElementById("signup_email").value = loginEmail;
+    }
     activateSignup();
   });
 
@@ -367,11 +374,17 @@ document.addEventListener("DOMContentLoaded", () => {
             updateProfileToast.classList.add("hidden");
           }, 1500);
         } else {
-          showToast(data.error || "( °ㅁ° ) Can't update profile picture", "#ef8e8e");
+          showToast(
+            data.error || "( °ㅁ° ) Can't update profile picture",
+            "#ef8e8e"
+          );
         }
       } catch (err) {
         console.error("Error updating profile picture:", err);
-        showToast("Can't update profile picture, try again? (˶°ㅁ°)⚠︎", "#ef8e8e");
+        showToast(
+          "Can't update profile picture, try again? (˶°ㅁ°)⚠︎",
+          "#ef8e8e"
+        );
       }
     });
   });
@@ -468,14 +481,17 @@ async function handleLogin(e) {
       // Persist profile picture
       try {
         if (data.user_id && data.profile_picture) {
-          localStorage.setItem(`profilePic_${data.user_id}`, data.profile_picture);
+          localStorage.setItem(
+            `profilePic_${data.user_id}`,
+            data.profile_picture
+          );
         }
       } catch (e) {
         console.warn("persist avatar failed", e);
       }
       loginForm.reset();
       // After login, go to the to-do list page
-      window.location.href = "/index.html";
+      window.location.replace("/index.html");
       showToast("ദ്ദി( • ᴗ < )♡ Login successful ! ⋆·˚*", "#32AA0E");
     } else {
       showToast(data.error || "( °ㅁ° ) Login failed", "#ef8e8e");
@@ -492,13 +508,15 @@ async function handleSignup(e) {
   const name = document.getElementById("signup_name").value;
   const email = document.getElementById("signup_email").value;
   const password = document.getElementById("signup_password").value;
-  const confirm_password = document.getElementById("signup_confirm_password").value;
+  const confirm_password = document.getElementById(
+    "signup_confirm_password"
+  ).value;
 
   try {
     const res = await fetch("/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, confirm_password}),
+      body: JSON.stringify({ name, email, password, confirm_password }),
     });
 
     if (!name || !email || !password || !confirm_password) {
@@ -556,14 +574,13 @@ function showProfile() {
     currentUser.email || "";
   document.getElementById("profile_bio_display").textContent =
     currentUser.bio || "insert bio here :33";
-  
+
   const previewEl = document.getElementById("profilePicPreview");
   const serverAvatar = currentUser.profile_picture || null;
 
   if (previewEl) {
     previewEl.src = serverAvatar || "profile-icons/user-modified.png";
   }
-
 }
 
 // Edit field modal functions
@@ -674,8 +691,9 @@ async function handleChangePassword() {
       const data = await res.json();
 
       if (res.ok) {
-        const updatePasswordToast =
-          document.getElementById("updatePasswordToast");
+        const updatePasswordToast = document.getElementById(
+          "updatePasswordToast"
+        );
         updatePasswordToast.classList.remove("hidden");
         setTimeout(() => updatePasswordToast.classList.add("hidden"), 1500);
 
@@ -700,7 +718,10 @@ async function handleDeleteAccount() {
   modal.classList.add("hidden");
 
   if (!authToken) {
-    showToast("✗ Hold on ! You need to login before deleting your account !", "#ef8e8e");
+    showToast(
+      "✗ Hold on ! You need to login before deleting your account !",
+      "#ef8e8e"
+    );
     return;
   }
 
@@ -756,7 +777,10 @@ async function handleResetRequest(e) {
     const data = await res.json();
 
     if (res.ok) {
-      showToast("જ⁀➴ ✉︎ Check your emails for the link reset link ᯓᡣ𐭩", "#32AA0E");
+      showToast(
+        "જ⁀➴ ✉︎ Check your emails for the link reset link ᯓᡣ𐭩",
+        "#32AA0E"
+      );
       document.getElementById("resetModal").classList.add("hidden");
       document.getElementById("resetRequestForm").reset();
       authModal.classList.remove("hidden");
