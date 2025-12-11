@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Auth - Pahuwaii</title>
+  <link rel="stylesheet" href="pahuwaii.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Schoolbell&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined">
+</head>
+
+<body class="flex flex-col items-center justify-center min-h-screen bg-[#fafafa]">
+
+  <!-- Landing Section -->
+  <div id="landing" class="flex flex-col items-center justify-center min-h-screen">
+    <h1 class="text-7xl font-bold mb-5" style="font-family: 'Schoolbell', cursive;">pahuwaii : 3</h1>
+    <p class="mb-8 text-xl text-center">a minimalist to-do list app for those who seeks peace in a world full of chaos</p>
+    <button id="getStartedBtn" class="px-8 py-2 bg-purple-100 border rounded text-xl hover:bg-purple-200">let's get started!</button>
+  </div>
+
+  <!-- Login/Signup Modal -->
+  <div id="authModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+  <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+
+    <!-- Toggle Buttons -->
+    <div class="flex bg-gray-200 rounded-full p-1 w-full">
+      <button id="showLoginBtn"
+        class="w-1/2 py-2 rounded-full text-sm font-semibold text-gray-600 hover:text-[#7c69bd] transition-all duration-300">
+        Login
+      </button>
+      <button id="showSignupBtn"
+        class="w-1/2 py-2 rounded-full text-sm font-semibold text-gray-600 hover:text-[#29810E] transition-all duration-300">
+        Signup
+      </button>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" class="flex flex-col gap-4 w-full">
+      <input type="text" id="login_name" placeholder="Name" required class="border p-2 rounded">
+      <input type="password" id="login_password" placeholder="Password" required class="border p-2 rounded">
+      <a href="#" id="forgotPasswordLink" class="text-gray-600 text-sm self-start hover:underline">Forgot Password?</a>
+      <button type="submit" class="bg-[#7c69bd] text-white px-4 py-2 rounded hover:bg-[#5a5371] transition">
+        Login
+      </button>
+
+      <p id="signupPrompt" class="text-sm text-center text-gray-600">
+        Don't have an account?
+        <a href="#" id="switchToSignup" class="text-[#29810E] font-medium hover:underline">Signup now</a>
+      </p>
+    </form>
+
+    <!-- Signup Form -->
+    <form id="signupForm" class="flex flex-col gap-4 w-full hidden">
+      <input type="text" id="signup_name" placeholder="Name" required class="border p-2 rounded">
+      <input type="email" id="signup_email" placeholder="Email" required class="border p-2 rounded">
+      <input type="password" id="signup_password" placeholder="Password" required class="border p-2 rounded">
+      <input type="password" id="signup_confirm_password" placeholder="Confirm Password" required class="border p-2 rounded">
+      <button type="submit" class="bg-[#4A9534] text-white px-4 py-2 rounded hover:bg-[#2E5B20] transition">
+        Sign Up
+      </button>
+    </form>
+
+    <button id="closeAuthModal" class="mt-2 text-gray-500 hover:text-black text-sm">Cancel</button>
+  </div>
+</div>
+  </div>
+
+  <!-- Password Reset Modal -->
+  <div id="resetModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+      <h2 class="text-2xl font-bold mb-4">Reset Password</h2>
+      <form id="resetRequestForm" class="flex flex-col gap-4">
+        <input type="email" id="reset_email" placeholder="Your Email" required class="border p-2 rounded">
+        <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Send Reset Link</button>
+      </form>
+      <button id="closeResetModal" class="mt-2 text-gray-500 hover:text-black">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Set New Password Modal -->
+  <div id="setPasswordModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md flex flex-col gap-6">
+      <h2 class="text-2xl font-bold mb-4">Set New Password</h2>
+      <form id="setPasswordForm" class="flex flex-col gap-4">
+        <input type="password" id="new_password" placeholder="New Password" required class="border p-2 rounded">
+        <button type="submit" class="bg-[#32AA0E] text-white px-4 py-2 rounded">Set Password</button>
+      </form>
+      <button id="closeSetPasswordModal" class="mt-2 text-gray-500 hover:text-black">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Profile Card -->
+<div id="profileCard" class="hidden flex flex-col items-center justify-center max-h-6xl p-8 w-full max-w-6xl mx-auto">
+  <div class="relative bg-white shadow-2xl p-10 w-full max-w-7xl flex flex-row gap-10 border-2 border-black"
+       style="font-family: 'Schoolbell', cursive; border-radius: 28px; aspect-ratio: 16 / 8;">
+
+    <button id="logoutBtn"
+      class="absolute top-6 right-10 px-6 py-2 bg-[#EB7078] border-2 border-black rounded-xl text-l font-bold hover:bg-[#E33B46] transition-all">
+      SIGN OUT
+    </button>
+
+    <!-- Profile Info Section -->
+    <div class="flex flex-col items-center flex-1 justify-center">
+      <h2 class="text-4xl font-bold mb-6"><span id="profile_name_display_header"></span>'s Profile :3</h2>
+      <span class="material-icons-outlined text-[100px] mb-6 border-2 border-black rounded-full">
+        <img src="user-modified.png" alt="User Avatar" class="size-32 object-cover rounded-full">
+      </span>
+
+      <div class="text-left w-full max-w-xs text-xl">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="font-bold">Name:</span>
+          <span id="profile_name_display" class="underline"></span>
+          <span id="editNameBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Name">edit</span>
+        </div>
+
+        <div class="mb-2">
+          <span class="font-bold">Email:</span>
+          <span id="profile_email_display" class="underline"></span>
+          <span id="editEmailBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Email">edit</span>
+        </div>
+
+        <div class="flex items-center gap-2 mb-2">
+          <span class="font-bold">Bio:</span>
+          <span id="profile_bio_display" class="italic">insert bio here</span>
+          <span id="editBioBtn" class="material-icons-outlined cursor-pointer text-xl hover:text-blue-500" title="Edit Bio">edit</span>
+        </div>
+      </div>
+
+      <div id="updateProfileToast"
+        class="hidden absolute z-50 bottom-10 bg-[#7c69bd] text-white px-4 py-2 rounded-lg shadow-lg">
+        profile updated successfully! (๑•̀ㅂ•́)و✧
+      </div>
+    </div>
+
+    <div class="flex flex-col flex-1 border-2 border-black p-6 bg-gray-100 justify-start mt-12"
+         style="border-radius: 20px;">
+
+      <div class="mb-6">
+        <h3 class="text-3xl font-bold mb-4 text-left">Settings</h3>
+        <div class="text-2xl font-bold mb-3">Account</div>
+        <button id="changePasswordBtn"
+          class="w-full bg-white border-2 border-black rounded-xl p-3 mb-3 text-left text-lg hover:bg-gray-200 transition-all">
+          Change your Password
+        </button>
+        <button id="deleteAccountBtn"
+          class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg text-red-500 hover:bg-red-100 transition-all">
+          Delete your account
+        </button>
+      </div>
+
+      <div>
+        <div class="text-2xl font-bold mb-3">Accessibility</div>
+        <label class="flex items-center gap-3 mb-2 text-lg">
+          <input type="checkbox" id="darkModeToggle" class="w-5 h-5 accent-black">
+          <span>Turn on <span class="font-bold">Dark Mode</span></span>
+        </label>
+
+        <!-- Cleaned Cat Mode Button -->
+        <button id="catModeToggle"
+          class="w-full bg-white border-2 border-black rounded-xl p-3 text-left text-lg font-bold hover:bg-gray-200 transition-all">
+          Cat Mode
+        </button>
+
+        <div id="catToast"
+          class="hidden fixed z-50 bottom-20 right-1 -translate-x-[70%] bg-[#fffdd7] px-4 py-2 rounded-lg shadow-lg">
+          /| _ ╱|、<br> ( •̀ㅅ •́  )<br> ＿ノ ヽ ノ＼＿<br> /　`/ ⌒Ｙ⌒ Ｙ　 \<br> ( 　(三ヽ人　 /　 　|<br> |　ﾉ⌒＼ ￣￣ヽ　 ノ<br> ヽ＿＿＿＞､＿＿／<br> ｜( 王 ﾉ〈<br> /ﾐ`ー―彡\
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Edit Field Modal -->
+  <div id="editFieldModal" class="fixed inset-0 bg-black/40 hidden flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm flex flex-col gap-4">
+      <h2 id="editFieldTitle" class="text-xl font-bold mb-2"></h2>
+      <input id="editFieldInput" type="text" class="border p-2 rounded" />
+      <div class="flex justify-end gap-2 mt-4">
+        <button id="cancelEditFieldBtn" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">Cancel</button>
+        <button id="saveEditFieldBtn" class="px-4 py-2 bg-[#32AA0E] text-white hover:bg-[#27840B] rounded">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Delete Modal -->
+  <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+    <div class="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full text-center">
+      <h2 class="text-lg font-semibold mb-4">Are you sure you want to delete your account?</h2>
+      <p class="text-sm text-gray-600 mb-6">This cannot be undone.</p>
+      <div class="flex justify-center space-x-3">
+        <button id="cancelDelete" class="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">
+          Cancel
+        </button>
+        <button id="confirmDelete" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="auth.js"></script>
+  
+</body>
+</html>
