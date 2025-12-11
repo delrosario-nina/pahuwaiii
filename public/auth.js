@@ -553,9 +553,11 @@ async function handleSignup(e) {
         profile_picture: data.profile_picture,
       };
       signupForm.reset();
-      // After signup, go to the to-do list page
-      window.location.replace("/index.html");
       showToast("Registered ! (ﾉ^ヮ^)ﾉ*", "#32AA0E");
+      // After signup, go to the to-do list page
+      setTimeout(() => {
+        window.location.replace("/index.html");
+      }, 500);
     } else {
       showToast(data.error || "( °ㅁ° ) Registration failed", "#ef8e8e");
     }
