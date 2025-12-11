@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // localStorage.removeItem("sortBy");
 
     // Force page reload to auth page, replacing history
-    window.location.replace("/auth.html");
+    window.location.replace("/index.html");
   });
 
   function getCurrentUserId() {

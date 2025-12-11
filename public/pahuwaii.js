@@ -24,7 +24,7 @@ function validateSession() {
 
   if (!currentId) {
     // No token, redirect to auth
-    window.location.replace("/auth.html");
+    window.location.replace("/index.html");
     return false;
   }
 
@@ -38,7 +38,7 @@ function validateSession() {
   if (sessionUserId !== currentId) {
     // User switched accounts, clear and redirect
     console.warn("Session user mismatch detected");
-    window.location.replace("/auth.html");
+    window.location.replace("/index.html");
     return false;
   }
 
@@ -299,7 +299,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }, 5000); // Check every 5 seconds
 
   if (!authToken) {
-    window.location.replace("/auth.html");
+    window.location.replace("/index.html");
     return;
   }
 
