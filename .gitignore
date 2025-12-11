@@ -1,2 +1,3 @@
-pahuwaii/
+node_modules/
 .env
+*todo.db
