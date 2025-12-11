@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@libsql/client": "^0.14.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
